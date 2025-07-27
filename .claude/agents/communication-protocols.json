@@ -1,0 +1,457 @@
+{
+  "agent_communication_protocols": {
+    "version": "1.0.0",
+    "description": "Event-driven communication protocols for DwayBank 18-agent ecosystem",
+    
+    "message_types": {
+      "task_delegation": {
+        "description": "Delegate tasks between agents",
+        "priority": "high",
+        "schema": {
+          "task_id": "string",
+          "task_type": "string",
+          "requirements": "object",
+          "deadline": "datetime",
+          "priority_level": "enum[critical,high,medium,low]",
+          "resources_required": "object",
+          "success_criteria": "object"
+        },
+        "routing": "direct",
+        "acknowledgment_required": true,
+        "timeout": 30000
+      },
+      
+      "resource_request": {
+        "description": "Request computational or MCP server resources",
+        "priority": "medium",
+        "schema": {
+          "resource_type": "enum[cpu,memory,mcp_server,context_window]",
+          "amount": "number",
+          "duration": "number",
+          "justification": "string",
+          "urgency": "enum[immediate,scheduled,flexible]"
+        },
+        "routing": "resource_manager",
+        "acknowledgment_required": true,
+        "timeout": 15000
+      },
+      
+      "quality_validation": {
+        "description": "Request quality validation for deliverables",
+        "priority": "high",
+        "schema": {
+          "deliverable_type": "string",
+          "deliverable_content": "object",
+          "validation_criteria": "array",
+          "compliance_requirements": "array",
+          "deadline": "datetime"
+        },
+        "routing": "quality_controller",
+        "acknowledgment_required": true,
+        "timeout": 60000
+      },
+      
+      "security_alert": {
+        "description": "Security incident or vulnerability notification",
+        "priority": "critical",
+        "schema": {
+          "alert_type": "enum[vulnerability,incident,compliance_violation,threat]",
+          "severity": "enum[critical,high,medium,low]",
+          "affected_systems": "array",
+          "details": "object",
+          "immediate_actions": "array"
+        },
+        "routing": "broadcast",
+        "recipients": ["dwaybank-security", "taskmaster-monitor", "quality-controller"],
+        "acknowledgment_required": true,
+        "timeout": 5000
+      },
+      
+      "progress_update": {
+        "description": "Progress updates for tasks and workflows",
+        "priority": "medium",
+        "schema": {
+          "task_id": "string",
+          "progress_percentage": "number",
+          "current_status": "string",
+          "blockers": "array",
+          "estimated_completion": "datetime",
+          "next_milestones": "array"
+        },
+        "routing": "monitor_and_manager",
+        "acknowledgment_required": false,
+        "timeout": 10000
+      },
+      
+      "coalition_invitation": {
+        "description": "Invite agents to join a coalition",
+        "priority": "high",
+        "schema": {
+          "coalition_id": "string",
+          "purpose": "string",
+          "leader_agent": "string",
+          "required_capabilities": "array",
+          "estimated_duration": "number",
+          "success_metrics": "object"
+        },
+        "routing": "direct",
+        "acknowledgment_required": true,
+        "timeout": 20000
+      },
+      
+      "compliance_check": {
+        "description": "Request compliance validation for financial operations",
+        "priority": "critical",
+        "schema": {
+          "compliance_type": "enum[pci_dss,sox,gdpr,banking_regulation]",
+          "operation_details": "object",
+          "regulatory_requirements": "array",
+          "audit_trail": "object",
+          "urgency": "enum[pre_production,production,audit_preparation]"
+        },
+        "routing": "compliance_coalition",
+        "recipients": ["dwaybank-security", "quality-controller", "dwaybank-scribe"],
+        "acknowledgment_required": true,
+        "timeout": 45000
+      },
+      
+      "performance_optimization": {
+        "description": "Request performance analysis and optimization",
+        "priority": "medium",
+        "schema": {
+          "system_component": "string",
+          "performance_metrics": "object",
+          "bottlenecks": "array",
+          "optimization_goals": "object",
+          "constraints": "object"
+        },
+        "routing": "performance_coalition",
+        "recipients": ["dwaybank-performance", "taskmaster-resource-manager"],
+        "acknowledgment_required": true,
+        "timeout": 30000
+      }
+    },
+    
+    "event_types": {
+      "financial_events": {
+        "payment_processing_started": {
+          "description": "Payment processing workflow initiated",
+          "subscribers": ["dwaybank-backend", "dwaybank-security", "dwaybank-qa", "taskmaster-monitor"],
+          "data_schema": {
+            "payment_id": "string",
+            "amount": "number",
+            "currency": "string",
+            "payment_method": "string",
+            "compliance_level": "string"
+          }
+        },
+        
+        "trading_session_opened": {
+          "description": "Trading session opened for platform",
+          "subscribers": ["dwaybank-frontend", "dwaybank-performance", "dwaybank-security", "taskmaster-monitor"],
+          "data_schema": {
+            "session_id": "string",
+            "market_data": "object",
+            "user_count": "number",
+            "performance_targets": "object"
+          }
+        },
+        
+        "compliance_audit_required": {
+          "description": "Compliance audit has been triggered",
+          "subscribers": ["dwaybank-security", "quality-controller", "dwaybank-scribe", "taskmaster-project-manager"],
+          "data_schema": {
+            "audit_type": "string",
+            "scope": "object",
+            "deadline": "datetime",
+            "regulatory_requirements": "array"
+          }
+        }
+      },
+      
+      "system_events": {
+        "agent_overloaded": {
+          "description": "Agent is experiencing high load",
+          "subscribers": ["taskmaster-resource-manager", "taskmaster-orchestrator", "taskmaster-monitor"],
+          "data_schema": {
+            "agent_id": "string",
+            "current_load": "number",
+            "queue_depth": "number",
+            "performance_degradation": "number"
+          }
+        },
+        
+        "mcp_server_degraded": {
+          "description": "MCP server performance degradation detected",
+          "subscribers": ["mcp-coordinator", "taskmaster-resource-manager", "taskmaster-monitor"],
+          "data_schema": {
+            "server_name": "string",
+            "performance_metrics": "object",
+            "affected_agents": "array",
+            "severity": "string"
+          }
+        },
+        
+        "coalition_formed": {
+          "description": "New agent coalition has been formed",
+          "subscribers": ["taskmaster-orchestrator", "taskmaster-monitor", "taskmaster-project-manager"],
+          "data_schema": {
+            "coalition_id": "string",
+            "leader": "string",
+            "members": "array",
+            "purpose": "string"
+          }
+        }
+      },
+      
+      "quality_events": {
+        "quality_gate_failed": {
+          "description": "Quality gate validation has failed",
+          "subscribers": ["quality-controller", "taskmaster-project-manager", "dwaybank-qa"],
+          "data_schema": {
+            "gate_type": "string",
+            "deliverable": "object",
+            "failure_reasons": "array",
+            "remediation_required": "object"
+          }
+        },
+        
+        "security_violation_detected": {
+          "description": "Security policy violation detected",
+          "subscribers": ["dwaybank-security", "quality-controller", "taskmaster-monitor"],
+          "data_schema": {
+            "violation_type": "string",
+            "severity": "string",
+            "affected_component": "string",
+            "immediate_actions": "array"
+          }
+        }
+      }
+    },
+    
+    "communication_patterns": {
+      "request_response": {
+        "description": "Synchronous request-response pattern",
+        "timeout": 30000,
+        "retry_attempts": 3,
+        "retry_backoff": "exponential",
+        "acknowledgment": "required",
+        "use_cases": ["task_delegation", "resource_request", "quality_validation"]
+      },
+      
+      "publish_subscribe": {
+        "description": "Asynchronous publish-subscribe pattern",
+        "timeout": null,
+        "acknowledgment": "optional",
+        "use_cases": ["progress_updates", "system_events", "performance_metrics"]
+      },
+      
+      "broadcast": {
+        "description": "One-to-many broadcast pattern",
+        "timeout": 10000,
+        "acknowledgment": "required_from_all",
+        "max_recipients": 18,
+        "use_cases": ["security_alerts", "system_announcements", "emergency_notifications"]
+      },
+      
+      "coalition_communication": {
+        "description": "Multi-party coalition communication",
+        "timeout": 45000,
+        "acknowledgment": "required_from_majority",
+        "consensus_threshold": 0.67,
+        "use_cases": ["collaborative_workflows", "consensus_decisions", "multi_agent_validation"]
+      }
+    },
+    
+    "routing_rules": {
+      "priority_routing": {
+        "critical": {
+          "max_latency": 1000,
+          "routing_strategy": "direct",
+          "resource_allocation": "unlimited",
+          "escalation_threshold": 5000
+        },
+        "high": {
+          "max_latency": 5000,
+          "routing_strategy": "optimized",
+          "resource_allocation": "priority",
+          "escalation_threshold": 15000
+        },
+        "medium": {
+          "max_latency": 15000,
+          "routing_strategy": "balanced",
+          "resource_allocation": "fair_share",
+          "escalation_threshold": 60000
+        },
+        "low": {
+          "max_latency": 60000,
+          "routing_strategy": "efficient",
+          "resource_allocation": "best_effort",
+          "escalation_threshold": 300000
+        }
+      },
+      
+      "agent_specific_routing": {
+        "dwaybank-security": {
+          "message_types": ["security_alert", "compliance_check", "quality_validation"],
+          "max_concurrent_messages": 10,
+          "priority_boost": true,
+          "auto_escalation": true
+        },
+        "taskmaster-orchestrator": {
+          "message_types": ["coalition_invitation", "task_delegation", "workflow_coordination"],
+          "max_concurrent_messages": 15,
+          "routing_optimization": true,
+          "load_balancing": true
+        },
+        "quality-controller": {
+          "message_types": ["quality_validation", "compliance_check", "deliverable_review"],
+          "max_concurrent_messages": 8,
+          "validation_required": true,
+          "audit_trail": true
+        }
+      }
+    },
+    
+    "security_policies": {
+      "message_encryption": {
+        "financial_data": {
+          "encryption_required": true,
+          "algorithm": "AES-256",
+          "key_rotation": "daily",
+          "authorized_agents": ["dwaybank-backend", "dwaybank-security", "quality-controller"]
+        },
+        "customer_data": {
+          "encryption_required": true,
+          "algorithm": "AES-256",
+          "key_rotation": "weekly",
+          "authorized_agents": ["dwaybank-backend", "dwaybank-frontend", "dwaybank-security"]
+        },
+        "system_data": {
+          "encryption_required": false,
+          "audit_required": true,
+          "access_logging": true
+        }
+      },
+      
+      "access_control": {
+        "role_based_access": {
+          "financial_operations": ["dwaybank-backend", "dwaybank-security", "quality-controller"],
+          "customer_operations": ["dwaybank-frontend", "dwaybank-backend", "dwaybank-security"],
+          "system_operations": ["taskmaster-orchestrator", "taskmaster-monitor", "mcp-coordinator"],
+          "quality_operations": ["quality-controller", "dwaybank-qa", "dwaybank-security"]
+        },
+        
+        "message_authorization": {
+          "payment_processing": {
+            "required_clearance": "financial_operations",
+            "multi_agent_approval": true,
+            "approval_threshold": 2
+          },
+          "security_configuration": {
+            "required_clearance": "security_operations",
+            "single_agent_approval": false,
+            "approval_agents": ["dwaybank-security", "quality-controller"]
+          }
+        }
+      }
+    },
+    
+    "performance_standards": {
+      "latency_requirements": {
+        "critical_financial": {
+          "max_latency": 100,
+          "target_latency": 50,
+          "timeout": 1000
+        },
+        "standard_operations": {
+          "max_latency": 1000,
+          "target_latency": 500,
+          "timeout": 5000
+        },
+        "background_processes": {
+          "max_latency": 5000,
+          "target_latency": 2000,
+          "timeout": 30000
+        }
+      },
+      
+      "throughput_requirements": {
+        "message_processing": {
+          "target_messages_per_second": 1000,
+          "max_queue_depth": 10000,
+          "processing_batch_size": 100
+        },
+        "event_processing": {
+          "target_events_per_second": 500,
+          "max_event_backlog": 5000,
+          "processing_window": 1000
+        }
+      }
+    },
+    
+    "error_handling": {
+      "retry_policies": {
+        "transient_errors": {
+          "max_retries": 3,
+          "backoff_strategy": "exponential",
+          "base_delay": 1000,
+          "max_delay": 30000
+        },
+        "permanent_errors": {
+          "max_retries": 0,
+          "escalation": "immediate",
+          "notification_required": true
+        }
+      },
+      
+      "circuit_breaker": {
+        "failure_threshold": 5,
+        "timeout": 60000,
+        "half_open_max_calls": 3,
+        "minimum_throughput": 10
+      },
+      
+      "dead_letter_queue": {
+        "max_retention": 86400000,
+        "retry_schedule": [1000, 5000, 15000, 60000],
+        "manual_intervention_threshold": 4
+      }
+    },
+    
+    "monitoring_and_metrics": {
+      "communication_metrics": {
+        "message_count": "counter",
+        "message_latency": "histogram",
+        "error_rate": "gauge",
+        "queue_depth": "gauge",
+        "agent_availability": "gauge"
+      },
+      
+      "business_metrics": {
+        "financial_transaction_success_rate": "gauge",
+        "compliance_validation_time": "histogram",
+        "quality_gate_pass_rate": "gauge",
+        "coalition_effectiveness": "gauge"
+      },
+      
+      "alerts": {
+        "high_error_rate": {
+          "threshold": 0.05,
+          "window": 300000,
+          "severity": "high"
+        },
+        "communication_latency": {
+          "threshold": 5000,
+          "window": 60000,
+          "severity": "medium"
+        },
+        "agent_unavailability": {
+          "threshold": 0.1,
+          "window": 60000,
+          "severity": "critical"
+        }
+      }
+    }
+  }
+}"

@@ -1,0 +1,344 @@
+{
+  "mcp_failover_configuration": {
+    "version": "1.0.0",
+    "description": "Failover chains and redundancy configuration for DwayBank MCP servers",
+    
+    "failover_chains": {
+      "context7": {
+        "primary": "context7",
+        "secondary": ["taskmaster_ai", "web_search", "native_documentation"],
+        "failure_threshold": 3,
+        "recovery_time": 300000,
+        "fallback_strategy": "graceful_degradation",
+        "capabilities_mapping": {
+          "documentation_lookup": ["taskmaster_ai", "web_search"],
+          "code_examples": ["taskmaster_ai", "native_implementation"],
+          "best_practices": ["web_search", "native_knowledge"]
+        }
+      },
+      
+      "sequential": {
+        "primary": "sequential",
+        "secondary": ["context7", "taskmaster_ai", "native_analysis"],
+        "failure_threshold": 2,
+        "recovery_time": 180000,
+        "fallback_strategy": "simplified_analysis",
+        "capabilities_mapping": {
+          "complex_reasoning": ["taskmaster_ai", "native_reasoning"],
+          "multi_step_analysis": ["context7", "step_by_step_native"],
+          "structured_thinking": ["native_structured_approach"]
+        }
+      },
+      
+      "magic": {
+        "primary": "magic",
+        "secondary": ["context7", "manual_implementation"],
+        "failure_threshold": 2,
+        "recovery_time": 600000,
+        "fallback_strategy": "manual_generation",
+        "capabilities_mapping": {
+          "ui_generation": ["context7", "manual_component_creation"],
+          "component_creation": ["manual_implementation"],
+          "design_systems": ["context7", "manual_design_patterns"]
+        }
+      },
+      
+      "playwright": {
+        "primary": "playwright",
+        "secondary": ["manual_testing", "context7"],
+        "failure_threshold": 2,
+        "recovery_time": 240000,
+        "fallback_strategy": "manual_testing",
+        "capabilities_mapping": {
+          "browser_automation": ["manual_testing"],
+          "e2e_testing": ["manual_e2e", "context7"],
+          "performance_testing": ["manual_performance", "native_analysis"]
+        }
+      },
+      
+      "taskmaster_ai": {
+        "primary": "taskmaster_ai",
+        "secondary": ["context7", "sequential", "native_coordination"],
+        "failure_threshold": 3,
+        "recovery_time": 120000,
+        "fallback_strategy": "native_coordination",
+        "capabilities_mapping": {
+          "multi_model_coordination": ["sequential", "native_coordination"],
+          "project_management": ["context7", "native_project_mgmt"],
+          "research": ["context7", "web_search"]
+        }
+      }
+    },
+    
+    "failure_detection": {
+      "health_check_interval": 30000,
+      "timeout_threshold": 10000,
+      "error_rate_threshold": 0.15,
+      "consecutive_failure_threshold": 3,
+      "response_time_threshold": 15000,
+      "availability_threshold": 0.85
+    },
+    
+    "recovery_strategies": {
+      "immediate_failover": {
+        "description": "Instant failover to secondary server",
+        "trigger_conditions": ["server_unavailable", "timeout_exceeded"],
+        "recovery_time": 0,
+        "data_consistency": "eventual",
+        "use_cases": ["critical_financial_operations", "real_time_trading"]
+      },
+      
+      "graceful_degradation": {
+        "description": "Reduce functionality but maintain core operations",
+        "trigger_conditions": ["performance_degraded", "partial_failure"],
+        "recovery_time": 30000,
+        "data_consistency": "strong",
+        "use_cases": ["documentation_lookup", "non_critical_analysis"]
+      },
+      
+      "circuit_breaker": {
+        "description": "Temporarily disable failed service",
+        "trigger_conditions": ["high_error_rate", "repeated_failures"],
+        "recovery_time": 300000,
+        "data_consistency": "strong",
+        "use_cases": ["expensive_operations", "rate_limited_services"]
+      },
+      
+      "retry_with_backoff": {
+        "description": "Retry with exponential backoff",
+        "trigger_conditions": ["transient_failure", "network_error"],
+        "max_retries": 3,
+        "backoff_multiplier": 2,
+        "initial_delay": 1000,
+        "max_delay": 30000
+      }
+    },
+    
+    "load_balancing": {
+      "algorithms": {
+        "round_robin": {
+          "description": "Distribute requests evenly across servers",
+          "weight_factor": "equal",
+          "use_cases": ["balanced_workload", "similar_server_capacity"]
+        },
+        
+        "weighted_round_robin": {
+          "description": "Distribute based on server capacity",
+          "weight_factors": {
+            "context7": 1.0,
+            "sequential": 0.8,
+            "magic": 0.6,
+            "playwright": 0.7,
+            "taskmaster_ai": 0.9
+          },
+          "use_cases": ["varied_server_capacity", "performance_optimization"]
+        },
+        
+        "least_connections": {
+          "description": "Route to server with fewest active connections",
+          "connection_threshold": 10,
+          "use_cases": ["connection_intensive_operations", "long_running_requests"]
+        },
+        
+        "response_time": {
+          "description": "Route to fastest responding server",
+          "response_time_window": 300000,
+          "threshold_percentile": 95,
+          "use_cases": ["latency_sensitive_operations", "real_time_requirements"]
+        },
+        
+        "cost_aware": {
+          "description": "Route based on cost efficiency",
+          "cost_weights": {
+            "context7": 0.1,
+            "sequential": 0.8,
+            "magic": 1.0,
+            "playwright": 0.4,
+            "taskmaster_ai": 0.3
+          },
+          "budget_constraints": true,
+          "use_cases": ["cost_optimization", "budget_limited_operations"]
+        }
+      }
+    },
+    
+    "monitoring_and_alerting": {
+      "metrics": {
+        "server_availability": {
+          "threshold": 0.99,
+          "measurement_window": 300000,
+          "alert_severity": "critical"
+        },
+        
+        "response_time": {
+          "threshold": 5000,
+          "measurement_window": 60000,
+          "alert_severity": "high"
+        },
+        
+        "error_rate": {
+          "threshold": 0.05,
+          "measurement_window": 300000,
+          "alert_severity": "medium"
+        },
+        
+        "cost_budget": {
+          "daily_threshold": 0.8,
+          "monthly_threshold": 0.9,
+          "alert_severity": "medium"
+        }
+      },
+      
+      "alert_channels": {
+        "immediate": ["taskmaster_monitor", "mcp_coordinator"],
+        "high_priority": ["taskmaster_project_manager", "dwaybank_security"],
+        "standard": ["quality_controller", "taskmaster_orchestrator"]
+      }
+    },
+    
+    "financial_domain_priorities": {
+      "critical_operations": {
+        "payment_processing": {
+          "required_servers": ["context7", "sequential"],
+          "failover_time": 1000,
+          "redundancy_level": "high",
+          "fallback_strategy": "immediate_failover"
+        },
+        
+        "trading_operations": {
+          "required_servers": ["sequential", "taskmaster_ai"],
+          "failover_time": 500,
+          "redundancy_level": "maximum",
+          "fallback_strategy": "immediate_failover"
+        },
+        
+        "compliance_validation": {
+          "required_servers": ["context7", "sequential"],
+          "failover_time": 2000,
+          "redundancy_level": "high",
+          "fallback_strategy": "graceful_degradation"
+        }
+      },
+      
+      "standard_operations": {
+        "ui_development": {
+          "required_servers": ["magic", "context7"],
+          "failover_time": 5000,
+          "redundancy_level": "medium",
+          "fallback_strategy": "manual_generation"
+        },
+        
+        "testing_workflows": {
+          "required_servers": ["playwright", "context7"],
+          "failover_time": 10000,
+          "redundancy_level": "medium",
+          "fallback_strategy": "manual_testing"
+        },
+        
+        "documentation": {
+          "required_servers": ["context7"],
+          "failover_time": 15000,
+          "redundancy_level": "low",
+          "fallback_strategy": "manual_documentation"
+        }
+      }
+    },
+    
+    "agent_specific_failover": {
+      "dwaybank_security": {
+        "primary_servers": ["sequential", "context7"],
+        "critical_requirements": ["high_availability", "data_integrity"],
+        "failover_tolerance": "zero",
+        "backup_strategies": ["multi_server_validation", "manual_security_review"]
+      },
+      
+      "dwaybank_backend": {
+        "primary_servers": ["context7", "sequential"],
+        "critical_requirements": ["performance", "reliability"],
+        "failover_tolerance": "low",
+        "backup_strategies": ["cached_patterns", "manual_implementation"]
+      },
+      
+      "dwaybank_frontend": {
+        "primary_servers": ["magic", "context7"],
+        "critical_requirements": ["ui_quality", "responsiveness"],
+        "failover_tolerance": "medium",
+        "backup_strategies": ["component_library", "manual_development"]
+      },
+      
+      "taskmaster_project_manager": {
+        "primary_servers": ["taskmaster_ai", "sequential"],
+        "critical_requirements": ["coordination", "decision_making"],
+        "failover_tolerance": "low",
+        "backup_strategies": ["native_coordination", "manual_management"]
+      }
+    },
+    
+    "cost_optimization": {
+      "budget_controls": {
+        "daily_limits": {
+          "context7": 5.00,
+          "sequential": 10.00,
+          "magic": 25.00,
+          "playwright": 7.00,
+          "taskmaster_ai": 15.00
+        },
+        
+        "monthly_limits": {
+          "context7": 100.00,
+          "sequential": 200.00,
+          "magic": 500.00,
+          "playwright": 150.00,
+          "taskmaster_ai": 300.00
+        },
+        
+        "emergency_budget": {
+          "total": 200.00,
+          "trigger_conditions": ["critical_financial_operations", "security_incidents"],
+          "approval_required": true,
+          "notification_agents": ["taskmaster_project_manager", "dwaybank_security"]
+        }
+      },
+      
+      "cost_aware_routing": {
+        "enable_cost_optimization": true,
+        "cost_weight_factor": 0.25,
+        "budget_utilization_threshold": 0.8,
+        "fallback_to_cheaper_alternatives": true,
+        "cost_tracking_granularity": "per_request"
+      }
+    },
+    
+    "performance_optimization": {
+      "caching_strategies": {
+        "documentation_cache": {
+          "ttl": 3600000,
+          "max_size": "500MB",
+          "invalidation_strategy": "time_based",
+          "hit_rate_target": 0.8
+        },
+        
+        "analysis_cache": {
+          "ttl": 1800000,
+          "max_size": "1GB",
+          "invalidation_strategy": "content_based",
+          "hit_rate_target": 0.6
+        },
+        
+        "ui_component_cache": {
+          "ttl": 900000,
+          "max_size": "200MB",
+          "invalidation_strategy": "version_based",
+          "hit_rate_target": 0.7
+        }
+      },
+      
+      "connection_pooling": {
+        "pool_size": 10,
+        "max_idle_time": 300000,
+        "connection_timeout": 10000,
+        "idle_check_interval": 60000
+      }
+    }
+  }
+}

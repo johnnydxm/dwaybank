@@ -1,0 +1,482 @@
+{
+  "dwaybank_agent_orchestration": {
+    "version": "1.0.0",
+    "project": "dwaybank",
+    "description": "Sub-agent orchestration configuration for DwayBank financial system development",
+    
+    "agent_definitions": {
+      "dwaybank-architect": {
+        "specialization": "systems_architecture",
+        "domains": ["architecture", "scalability", "design", "financial_infrastructure"],
+        "priority_hierarchy": ["maintainability", "scalability", "performance", "short_term_gains"],
+        "tool_access": {
+          "authorized": ["Read", "Grep", "Glob", "Write", "TodoWrite"],
+          "restricted": ["Edit", "MultiEdit", "Bash"],
+          "financial_tools": ["architecture_diagrams", "compliance_databases"],
+          "security_level": "high"
+        },
+        "mcp_preferences": {
+          "primary": "sequential",
+          "secondary": "context7",
+          "avoided": ["magic"],
+          "coordination_weight": 0.9
+        },
+        "activation_triggers": {
+          "keywords": ["architecture", "design", "scalability", "banking system", "financial infrastructure"],
+          "complexity_threshold": 0.8,
+          "auto_activation_confidence": 0.95
+        },
+        "resource_requirements": {
+          "context_window": "large",
+          "processing_intensity": "high",
+          "memory_usage": "medium"
+        }
+      },
+      
+      "dwaybank-frontend": {
+        "specialization": "user_experience",
+        "domains": ["ui", "ux", "accessibility", "performance", "financial_interfaces"],
+        "priority_hierarchy": ["user_needs", "accessibility", "performance", "technical_elegance"],
+        "tool_access": {
+          "authorized": ["Read", "Write", "Edit", "MultiEdit", "TodoWrite"],
+          "restricted": ["Bash"],
+          "financial_tools": ["design_systems", "component_libraries", "accessibility_testing"],
+          "security_level": "medium"
+        },
+        "mcp_preferences": {
+          "primary": "magic",
+          "secondary": "playwright",
+          "coordination_weight": 0.8
+        },
+        "activation_triggers": {
+          "keywords": ["component", "responsive", "accessibility", "financial UI", "banking interface"],
+          "complexity_threshold": 0.6,
+          "auto_activation_confidence": 0.90
+        },
+        "resource_requirements": {
+          "context_window": "medium",
+          "processing_intensity": "medium", 
+          "memory_usage": "medium"
+        }
+      },
+      
+      "dwaybank-backend": {
+        "specialization": "server_systems",
+        "domains": ["api", "database", "reliability", "financial_processing"],
+        "priority_hierarchy": ["reliability", "security", "performance", "features"],
+        "tool_access": {
+          "authorized": ["Read", "Write", "Edit", "MultiEdit", "Bash", "TodoWrite"],
+          "restricted": ["production_db_access"],
+          "financial_tools": ["database_tools", "api_testing", "security_scanners"],
+          "security_level": "high"
+        },
+        "mcp_preferences": {
+          "primary": "context7",
+          "secondary": "sequential",
+          "avoided": ["magic"],
+          "coordination_weight": 0.9
+        },
+        "activation_triggers": {
+          "keywords": ["API", "database", "service", "reliability", "financial backend", "payment processing"],
+          "complexity_threshold": 0.7,
+          "auto_activation_confidence": 0.92
+        },
+        "resource_requirements": {
+          "context_window": "large",
+          "processing_intensity": "high",
+          "memory_usage": "high"
+        }
+      },
+      
+      "dwaybank-security": {
+        "specialization": "threat_modeling",
+        "domains": ["security", "compliance", "vulnerability", "financial_protection"],
+        "priority_hierarchy": ["security", "compliance", "reliability", "performance"],
+        "tool_access": {
+          "authorized": ["Read", "Grep", "Write", "TodoWrite"],
+          "restricted": ["Edit", "MultiEdit", "Bash"],
+          "financial_tools": ["vulnerability_scanners", "compliance_tools", "security_monitoring"],
+          "security_level": "critical"
+        },
+        "mcp_preferences": {
+          "primary": "sequential",
+          "secondary": "context7",
+          "avoided": ["magic"],
+          "coordination_weight": 1.0
+        },
+        "activation_triggers": {
+          "keywords": ["vulnerability", "threat", "compliance", "security", "PCI DSS", "fraud detection"],
+          "complexity_threshold": 0.5,
+          "auto_activation_confidence": 0.95
+        },
+        "resource_requirements": {
+          "context_window": "large",
+          "processing_intensity": "high",
+          "memory_usage": "medium"
+        }
+      },
+      
+      "dwaybank-performance": {
+        "specialization": "optimization",
+        "domains": ["performance", "bottlenecks", "scaling", "transaction_throughput"],
+        "priority_hierarchy": ["measure_first", "critical_path", "user_experience", "premature_optimization"],
+        "tool_access": {
+          "authorized": ["Read", "Grep", "Bash", "TodoWrite"],
+          "restricted": ["Edit", "MultiEdit"],
+          "financial_tools": ["load_testing", "profilers", "apm_tools", "monitoring"],
+          "security_level": "medium"
+        },
+        "mcp_preferences": {
+          "primary": "playwright",
+          "secondary": "sequential",
+          "avoided": ["magic"],
+          "coordination_weight": 0.8
+        },
+        "activation_triggers": {
+          "keywords": ["optimize", "performance", "bottleneck", "slow", "latency", "throughput"],
+          "complexity_threshold": 0.6,
+          "auto_activation_confidence": 0.88
+        },
+        "resource_requirements": {
+          "context_window": "medium",
+          "processing_intensity": "high",
+          "memory_usage": "high"
+        }
+      },
+      
+      "dwaybank-analyzer": {
+        "specialization": "root_cause_analysis",
+        "domains": ["investigation", "debugging", "evidence", "financial_discrepancies"],
+        "priority_hierarchy": ["evidence", "systematic_approach", "thoroughness", "speed"],
+        "tool_access": {
+          "authorized": ["Read", "Grep", "Write", "TodoWrite"],
+          "restricted": ["Edit", "MultiEdit"],
+          "financial_tools": ["log_analysis", "transaction_monitoring", "audit_tools"],
+          "security_level": "high"
+        },
+        "mcp_preferences": {
+          "primary": "sequential",
+          "secondary": "context7",
+          "tertiary": "all_servers",
+          "coordination_weight": 0.9
+        },
+        "activation_triggers": {
+          "keywords": ["analyze", "investigate", "root cause", "troubleshoot", "financial discrepancy"],
+          "complexity_threshold": 0.7,
+          "auto_activation_confidence": 0.85
+        },
+        "resource_requirements": {
+          "context_window": "large",
+          "processing_intensity": "high",
+          "memory_usage": "medium"
+        }
+      },
+      
+      "dwaybank-qa": {
+        "specialization": "quality_assurance",
+        "domains": ["testing", "validation", "compliance", "edge_cases"],
+        "priority_hierarchy": ["prevention", "detection", "correction", "coverage"],
+        "tool_access": {
+          "authorized": ["Read", "Grep", "Write", "TodoWrite"],
+          "restricted": ["Edit", "MultiEdit"],
+          "financial_tools": ["testing_frameworks", "compliance_validators", "accessibility_tools"],
+          "security_level": "medium"
+        },
+        "mcp_preferences": {
+          "primary": "playwright",
+          "secondary": "sequential",
+          "coordination_weight": 0.8
+        },
+        "activation_triggers": {
+          "keywords": ["test", "quality", "validation", "compliance", "edge cases", "financial accuracy"],
+          "complexity_threshold": 0.5,
+          "auto_activation_confidence": 0.90
+        },
+        "resource_requirements": {
+          "context_window": "medium",
+          "processing_intensity": "medium",
+          "memory_usage": "medium"
+        }
+      },
+      
+      "dwaybank-refactorer": {
+        "specialization": "code_quality",
+        "domains": ["maintainability", "technical_debt", "clean_code", "financial_clarity"],
+        "priority_hierarchy": ["simplicity", "maintainability", "readability", "performance"],
+        "tool_access": {
+          "authorized": ["Read", "Edit", "MultiEdit", "Write", "TodoWrite"],
+          "restricted": ["Bash"],
+          "financial_tools": ["static_analysis", "complexity_analyzers", "debt_tracking"],
+          "security_level": "medium"
+        },
+        "mcp_preferences": {
+          "primary": "sequential",
+          "secondary": "context7",
+          "avoided": ["magic"],
+          "coordination_weight": 0.7
+        },
+        "activation_triggers": {
+          "keywords": ["refactor", "cleanup", "technical debt", "code quality", "maintainability"],
+          "complexity_threshold": 0.6,
+          "auto_activation_confidence": 0.85
+        },
+        "resource_requirements": {
+          "context_window": "medium",
+          "processing_intensity": "medium",
+          "memory_usage": "medium"
+        }
+      },
+      
+      "dwaybank-devops": {
+        "specialization": "infrastructure",
+        "domains": ["deployment", "automation", "monitoring", "financial_infrastructure"],
+        "priority_hierarchy": ["automation", "observability", "reliability", "scalability"],
+        "tool_access": {
+          "authorized": ["Read", "Bash", "Write", "TodoWrite"],
+          "restricted": ["Edit", "MultiEdit"],
+          "financial_tools": ["infrastructure_tools", "monitoring_tools", "deployment_automation"],
+          "security_level": "high"
+        },
+        "mcp_preferences": {
+          "primary": "sequential",
+          "secondary": "context7",
+          "avoided": ["magic"],
+          "coordination_weight": 0.8
+        },
+        "activation_triggers": {
+          "keywords": ["deploy", "infrastructure", "automation", "monitoring", "scaling"],
+          "complexity_threshold": 0.6,
+          "auto_activation_confidence": 0.88
+        },
+        "resource_requirements": {
+          "context_window": "medium",
+          "processing_intensity": "medium",
+          "memory_usage": "medium"
+        }
+      },
+      
+      "dwaybank-mentor": {
+        "specialization": "knowledge_transfer",
+        "domains": ["education", "documentation", "training", "financial_domain_knowledge"],
+        "priority_hierarchy": ["understanding", "knowledge_transfer", "teaching", "task_completion"],
+        "tool_access": {
+          "authorized": ["Read", "Write", "TodoWrite"],
+          "restricted": ["Edit", "MultiEdit", "Bash"],
+          "financial_tools": ["documentation_tools", "training_platforms", "knowledge_bases"],
+          "security_level": "low"
+        },
+        "mcp_preferences": {
+          "primary": "context7",
+          "secondary": "sequential",
+          "avoided": ["magic"],
+          "coordination_weight": 0.6
+        },
+        "activation_triggers": {
+          "keywords": ["explain", "learn", "understand", "educate", "training", "documentation"],
+          "complexity_threshold": 0.4,
+          "auto_activation_confidence": 0.80
+        },
+        "resource_requirements": {
+          "context_window": "medium",
+          "processing_intensity": "low",
+          "memory_usage": "low"
+        }
+      },
+      
+      "dwaybank-scribe": {
+        "specialization": "professional_writing",
+        "domains": ["documentation", "communication", "regulatory_content", "professional_writing"],
+        "priority_hierarchy": ["clarity", "audience_needs", "cultural_sensitivity", "completeness"],
+        "tool_access": {
+          "authorized": ["Read", "Write", "Edit", "TodoWrite"],
+          "restricted": ["MultiEdit", "Bash"],
+          "financial_tools": ["content_management", "style_guides", "regulatory_databases"],
+          "security_level": "medium"
+        },
+        "mcp_preferences": {
+          "primary": "context7",
+          "secondary": "sequential",
+          "avoided": ["magic"],
+          "coordination_weight": 0.7
+        },
+        "activation_triggers": {
+          "keywords": ["document", "write", "guide", "manual", "policy", "report", "communication"],
+          "complexity_threshold": 0.3,
+          "auto_activation_confidence": 0.85
+        },
+        "resource_requirements": {
+          "context_window": "medium",
+          "processing_intensity": "low",
+          "memory_usage": "low"
+        }
+      },
+      
+      "dwaybank-design": {
+        "specialization": "financial_interface_design",
+        "domains": ["ui_design", "ux_design", "financial_interfaces", "compliance_design", "accessibility"],
+        "priority_hierarchy": ["user_needs", "compliance", "accessibility", "performance", "aesthetics"],
+        "tool_access": {
+          "authorized": ["Read", "Write", "Edit", "MultiEdit", "TodoWrite"],
+          "restricted": ["Bash"],
+          "financial_tools": ["design_systems", "prototyping_tools", "accessibility_validators", "compliance_checkers"],
+          "security_level": "medium"
+        },
+        "mcp_preferences": {
+          "primary": "magic",
+          "secondary": "context7",
+          "tertiary": "sequential",
+          "coordination_weight": 0.8
+        },
+        "activation_triggers": {
+          "keywords": ["design", "ui", "interface", "component", "layout", "wireframe", "mockup", "prototype", "financial interface", "payment form", "dashboard"],
+          "complexity_threshold": 0.6,
+          "auto_activation_confidence": 0.90
+        },
+        "resource_requirements": {
+          "context_window": "large",
+          "processing_intensity": "high",
+          "memory_usage": "high"
+        },
+        "coalition_capabilities": {
+          "design_leadership": ["dwaybank-frontend", "dwaybank-security"],
+          "compliance_design": ["quality-controller", "dwaybank-security", "dwaybank-backend"],
+          "financial_ux": ["dwaybank-frontend", "dwaybank-backend", "taskmaster-monitor"]
+        },
+        "design_specializations": {
+          "payment_interfaces": ["pci_dss_compliance", "fraud_detection_ui", "secure_forms"],
+          "trading_dashboards": ["real_time_data", "performance_optimization", "data_visualization"],
+          "compliance_interfaces": ["audit_trails", "approval_workflows", "regulatory_forms"],
+          "risk_management": ["risk_indicators", "scenario_analysis", "alert_systems"]
+        }
+      }
+    },
+    
+    "agent_selection_algorithms": {
+      "primary_selection": {
+        "method": "keyword_domain_matching",
+        "weights": {
+          "keyword_match": 0.4,
+          "domain_expertise": 0.3,
+          "complexity_alignment": 0.2,
+          "resource_availability": 0.1
+        },
+        "confidence_threshold": 0.8
+      },
+      
+      "fallback_selection": {
+        "method": "capability_scoring",
+        "weights": {
+          "tool_access_match": 0.5,
+          "mcp_preference_alignment": 0.3,
+          "resource_efficiency": 0.2
+        },
+        "confidence_threshold": 0.6
+      },
+      
+      "multi_agent_coordination": {
+        "method": "expertise_complementarity",
+        "max_concurrent_agents": 3,
+        "coordination_patterns": {
+          "architect_security": 0.9,
+          "frontend_qa": 0.8,
+          "backend_security": 0.9,
+          "performance_devops": 0.8,
+          "analyzer_qa": 0.7,
+          "mentor_scribe": 0.8,
+          "design_frontend": 0.9,
+          "design_security": 0.8,
+          "design_backend": 0.7,
+          "design_qa": 0.8
+        }
+      }
+    },
+    
+    "mcp_server_coordination": {
+      "server_priorities": {
+        "sequential": {
+          "primary_agents": ["dwaybank-architect", "dwaybank-security", "dwaybank-analyzer"],
+          "resource_weight": 0.9,
+          "use_cases": ["complex_analysis", "threat_modeling", "systematic_investigation"]
+        },
+        "context7": {
+          "primary_agents": ["dwaybank-backend", "dwaybank-mentor", "dwaybank-scribe"],
+          "resource_weight": 0.8,
+          "use_cases": ["documentation_lookup", "best_practices", "educational_content"]
+        },
+        "magic": {
+          "primary_agents": ["dwaybank-frontend", "dwaybank-design"],
+          "resource_weight": 0.8,
+          "use_cases": ["ui_generation", "component_creation", "design_systems", "financial_interface_design"]
+        },
+        "playwright": {
+          "primary_agents": ["dwaybank-performance", "dwaybank-qa"],
+          "resource_weight": 0.8,
+          "use_cases": ["performance_testing", "e2e_testing", "user_workflow_validation"]
+        }
+      },
+      
+      "coordination_strategies": {
+        "load_balancing": {
+          "method": "agent_priority_weighted",
+          "max_concurrent_requests": 5,
+          "timeout_handling": "graceful_degradation"
+        },
+        "fallback_chains": {
+          "sequential_unavailable": ["context7", "native_analysis"],
+          "context7_unavailable": ["sequential", "web_search"],
+          "magic_unavailable": ["context7", "manual_implementation"],
+          "playwright_unavailable": ["manual_testing", "static_analysis"]
+        }
+      }
+    },
+    
+    "resource_management": {
+      "allocation_strategy": {
+        "method": "priority_based_allocation",
+        "resource_pools": {
+          "high_priority": ["dwaybank-security", "dwaybank-architect"],
+          "medium_priority": ["dwaybank-backend", "dwaybank-frontend", "dwaybank-analyzer", "dwaybank-design"],
+          "low_priority": ["dwaybank-mentor", "dwaybank-scribe"]
+        }
+      },
+      
+      "performance_monitoring": {
+        "metrics": ["response_time", "context_utilization", "success_rate", "user_satisfaction"],
+        "thresholds": {
+          "response_time_warning": "30s",
+          "response_time_critical": "60s",
+          "context_utilization_warning": "80%",
+          "success_rate_minimum": "90%"
+        }
+      }
+    },
+    
+    "financial_domain_optimization": {
+      "compliance_requirements": {
+        "pci_dss": {
+          "applicable_agents": ["dwaybank-security", "dwaybank-backend", "dwaybank-frontend", "dwaybank-design"],
+          "mandatory_validations": ["data_encryption", "access_controls", "audit_trails", "secure_ui_design"]
+        },
+        "sox_compliance": {
+          "applicable_agents": ["dwaybank-security", "dwaybank-analyzer", "dwaybank-scribe"],
+          "mandatory_validations": ["change_management", "audit_documentation", "control_testing"]
+        },
+        "gdpr_ccpa": {
+          "applicable_agents": ["dwaybank-security", "dwaybank-backend", "dwaybank-scribe", "dwaybank-design"],
+          "mandatory_validations": ["data_privacy", "consent_management", "breach_notification", "privacy_by_design_ui"]
+        }
+      },
+      
+      "financial_accuracy_requirements": {
+        "calculation_precision": {
+          "applicable_agents": ["dwaybank-backend", "dwaybank-refactorer", "dwaybank-qa"],
+          "validation_rules": ["decimal_arithmetic", "rounding_consistency", "currency_handling"]
+        },
+        "transaction_integrity": {
+          "applicable_agents": ["dwaybank-backend", "dwaybank-security", "dwaybank-analyzer"],
+          "validation_rules": ["acid_compliance", "audit_trails", "reconciliation_procedures"]
+        }
+      }
+    }
+  }
+}

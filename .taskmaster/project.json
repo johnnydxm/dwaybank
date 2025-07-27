@@ -1,0 +1,247 @@
+{
+  "project": {
+    "name": "dwaybank",
+    "type": "financial_platform",
+    "version": "1.0.0",
+    "description": "Advanced financial platform with SuperClaude agent ecosystem integration",
+    
+    "metadata": {
+      "created": "2025-01-27",
+      "last_updated": "2025-01-27",
+      "domain": "financial_services",
+      "complexity": "enterprise",
+      "agent_ecosystem": "superclaude_integrated"
+    },
+
+    "requirements": {
+      "compliance": ["PCI_DSS", "SOX", "GDPR", "CCPA"],
+      "security_level": "critical",
+      "performance": {
+        "transaction_throughput": ">10000 tps",
+        "response_time": "<200ms",
+        "uptime": "99.99%",
+        "scalability": "horizontal"
+      },
+      "architecture": {
+        "pattern": "microservices",
+        "database": "distributed",
+        "caching": "redis_cluster",
+        "messaging": "event_driven"
+      }
+    },
+
+    "agent_ecosystem": {
+      "total_agents": 18,
+      "superclaude_agents": 12,
+      "taskmaster_agents": 6,
+      "coordination_mode": "coalition_based",
+      "
+      
+      "superclaude_agents": {
+        "dwaybank-architect": {
+          "role": "systems_architecture",
+          "priority": "high",
+          "mcp_servers": ["sequential", "context7"]
+        },
+        "dwaybank-frontend": {
+          "role": "user_experience",
+          "priority": "high",
+          "mcp_servers": ["magic", "playwright"]
+        },
+        "dwaybank-backend": {
+          "role": "server_systems",
+          "priority": "high",
+          "mcp_servers": ["context7", "sequential"]
+        },
+        "dwaybank-security": {
+          "role": "threat_modeling",
+          "priority": "critical",
+          "mcp_servers": ["sequential", "context7"]
+        },
+        "dwaybank-performance": {
+          "role": "optimization",
+          "priority": "high",
+          "mcp_servers": ["playwright", "sequential"]
+        },
+        "dwaybank-analyzer": {
+          "role": "root_cause_analysis",
+          "priority": "high",
+          "mcp_servers": ["sequential", "context7"]
+        },
+        "dwaybank-qa": {
+          "role": "quality_assurance",
+          "priority": "medium",
+          "mcp_servers": ["playwright", "sequential"]
+        },
+        "dwaybank-refactorer": {
+          "role": "code_quality",
+          "priority": "medium",
+          "mcp_servers": ["sequential", "context7"]
+        },
+        "dwaybank-devops": {
+          "role": "infrastructure",
+          "priority": "high",
+          "mcp_servers": ["sequential", "context7"]
+        },
+        "dwaybank-mentor": {
+          "role": "knowledge_transfer",
+          "priority": "low",
+          "mcp_servers": ["context7", "sequential"]
+        },
+        "dwaybank-scribe": {
+          "role": "professional_writing",
+          "priority": "medium",
+          "mcp_servers": ["context7", "sequential"]
+        },
+        "dwaybank-design": {
+          "role": "financial_interface_design",
+          "priority": "high",
+          "mcp_servers": ["magic", "context7", "sequential"]
+        }
+      },
+
+      "taskmaster_agents": {
+        "taskmaster-orchestrator": {
+          "role": "coalition_coordination",
+          "priority": "critical",
+          "coordination_scope": "system_wide"
+        },
+        "taskmaster-project-manager": {
+          "role": "project_oversight",
+          "priority": "high",
+          "coordination_scope": "project_level"
+        },
+        "taskmaster-researcher": {
+          "role": "requirements_analysis",
+          "priority": "high",
+          "coordination_scope": "research_domain"
+        },
+        "taskmaster-monitor": {
+          "role": "system_monitoring",
+          "priority": "medium",
+          "coordination_scope": "operational"
+        },
+        "taskmaster-resource-manager": {
+          "role": "resource_optimization",
+          "priority": "medium",
+          "coordination_scope": "resource_allocation"
+        },
+        "mcp-coordinator": {
+          "role": "mcp_server_management",
+          "priority": "high",
+          "coordination_scope": "mcp_ecosystem"
+        }
+      }
+    },
+
+    "coordination_patterns": {
+      "initialization": {
+        "leader": "taskmaster-orchestrator",
+        "participants": ["dwaybank-architect", "dwaybank-analyzer", "taskmaster-project-manager"],
+        "workflow": "sequential_with_handoffs"
+      },
+      "development": {
+        "leader": "dwaybank-architect",
+        "participants": ["dwaybank-frontend", "dwaybank-backend", "dwaybank-security"],
+        "workflow": "parallel_with_coordination"
+      },
+      "analysis": {
+        "leader": "dwaybank-analyzer",
+        "participants": ["taskmaster-researcher", "dwaybank-performance", "dwaybank-qa"],
+        "workflow": "collaborative_investigation"
+      },
+      "deployment": {
+        "leader": "dwaybank-devops",
+        "participants": ["dwaybank-security", "dwaybank-qa", "taskmaster-monitor"],
+        "workflow": "staged_deployment"
+      }
+    },
+
+    "mcp_integration": {
+      "shared_servers": {
+        "context7": {
+          "primary_users": ["dwaybank-backend", "dwaybank-mentor", "dwaybank-scribe"],
+          "coordination_weight": 0.8,
+          "resource_allocation": "intelligent"
+        },
+        "sequential": {
+          "primary_users": ["dwaybank-architect", "dwaybank-security", "dwaybank-analyzer"],
+          "coordination_weight": 0.9,
+          "resource_allocation": "priority_based"
+        },
+        "magic": {
+          "primary_users": ["dwaybank-frontend", "dwaybank-design"],
+          "coordination_weight": 0.8,
+          "resource_allocation": "balanced"
+        },
+        "playwright": {
+          "primary_users": ["dwaybank-performance", "dwaybank-qa"],
+          "coordination_weight": 0.8,
+          "resource_allocation": "load_balanced"
+        },
+        "github": {
+          "primary_users": ["dwaybank-devops", "dwaybank-qa", "dwaybank-scribe"],
+          "coordination_weight": 0.9,
+          "resource_allocation": "workflow_optimized",
+          "capabilities": ["pr_management", "issue_tracking", "repository_operations", "code_review"]
+        }
+      },
+      "coordination_strategy": "resource_pool_sharing",
+      "fallback_mechanisms": ["graceful_degradation", "alternative_routing", "manual_override"]
+    },
+
+    "workflows": {
+      "project_initialization": {
+        "phases": [
+          "requirements_analysis",
+          "architecture_design", 
+          "agent_activation",
+          "coordination_setup"
+        ],
+        "estimated_duration": "2-4 hours",
+        "success_criteria": ["unified_coordination", "agent_ecosystem_active", "mcp_servers_coordinated"]
+      },
+      "feature_development": {
+        "phases": [
+          "design_phase",
+          "implementation_phase",
+          "testing_phase",
+          "deployment_phase"
+        ],
+        "coordination_mode": "parallel_with_checkpoints",
+        "quality_gates": ["security_validation", "performance_verification", "compliance_check"]
+      },
+      "github_integration": {
+        "phases": [
+          "branch_creation",
+          "pull_request_management",
+          "code_review_automation",
+          "merge_coordination"
+        ],
+        "coordination_mode": "github_cli_driven",
+        "quality_gates": ["pr_validation", "review_completion", "merge_readiness"],
+        "automation_features": ["pr_creation", "issue_tracking", "review_assignment", "status_checks"]
+      }
+    },
+
+    "monitoring": {
+      "health_checks": {
+        "agent_coordination": "30s",
+        "mcp_server_status": "60s",
+        "system_performance": "10s"
+      },
+      "metrics": [
+        "agent_response_times",
+        "coalition_formation_speed",
+        "mcp_server_utilization",
+        "task_completion_rates",
+        "system_throughput"
+      ],
+      "alerting": {
+        "agent_failures": "immediate",
+        "performance_degradation": "5 minutes",
+        "coordination_issues": "2 minutes"
+      }
+    }
+  }
+}

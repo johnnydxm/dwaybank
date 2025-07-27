@@ -1,0 +1,390 @@
+{
+  "taskmaster_command_mapping": {
+    "version": "1.0.0",
+    "description": "Command mapping from Task Master commands to DwayBank specialized sub-agents",
+    
+    "command_mappings": {
+      "financial_system_commands": {
+        "implement-payment-system": {
+          "primary_agent": "dwaybank-backend",
+          "supporting_agents": ["dwaybank-security", "dwaybank-qa"],
+          "mcp_preference": "context7",
+          "estimated_complexity": 0.8,
+          "financial_domain": "payment_processing",
+          "compliance_requirements": ["pci_dss"],
+          "execution_phases": [
+            {
+              "phase": "architecture_review",
+              "agent": "dwaybank-architect",
+              "duration": "30%"
+            },
+            {
+              "phase": "implementation", 
+              "agent": "dwaybank-backend",
+              "duration": "50%"
+            },
+            {
+              "phase": "security_validation",
+              "agent": "dwaybank-security", 
+              "duration": "20%"
+            }
+          ]
+        },
+        
+        "design-account-management": {
+          "primary_agent": "dwaybank-architect",
+          "supporting_agents": ["dwaybank-backend", "dwaybank-security"],
+          "mcp_preference": "sequential",
+          "estimated_complexity": 0.7,
+          "financial_domain": "account_management",
+          "compliance_requirements": ["sox_compliance", "gdpr_ccpa"],
+          "execution_phases": [
+            {
+              "phase": "system_design",
+              "agent": "dwaybank-architect",
+              "duration": "60%"
+            },
+            {
+              "phase": "security_architecture",
+              "agent": "dwaybank-security",
+              "duration": "40%"
+            }
+          ]
+        },
+        
+        "implement-trading-interface": {
+          "primary_agent": "dwaybank-frontend",
+          "supporting_agents": ["dwaybank-performance", "dwaybank-qa"],
+          "mcp_preference": "magic",
+          "estimated_complexity": 0.6,
+          "financial_domain": "trading_systems",
+          "compliance_requirements": ["accessibility"],
+          "execution_phases": [
+            {
+              "phase": "ui_design",
+              "agent": "dwaybank-frontend",
+              "duration": "50%"
+            },
+            {
+              "phase": "performance_optimization",
+              "agent": "dwaybank-performance",
+              "duration": "30%"
+            },
+            {
+              "phase": "testing_validation",
+              "agent": "dwaybank-qa",
+              "duration": "20%"
+            }
+          ]
+        },
+        
+        "audit-financial-security": {
+          "primary_agent": "dwaybank-security",
+          "supporting_agents": ["dwaybank-analyzer", "dwaybank-scribe"],
+          "mcp_preference": "sequential",
+          "estimated_complexity": 0.9,
+          "financial_domain": "security_compliance",
+          "compliance_requirements": ["pci_dss", "sox_compliance"],
+          "execution_phases": [
+            {
+              "phase": "threat_assessment",
+              "agent": "dwaybank-security",
+              "duration": "40%"
+            },
+            {
+              "phase": "vulnerability_analysis",
+              "agent": "dwaybank-analyzer",
+              "duration": "40%"
+            },
+            {
+              "phase": "audit_documentation",
+              "agent": "dwaybank-scribe",
+              "duration": "20%"
+            }
+          ]
+        },
+        
+        "optimize-transaction-processing": {
+          "primary_agent": "dwaybank-performance",
+          "supporting_agents": ["dwaybank-backend", "dwaybank-devops"],
+          "mcp_preference": "playwright",
+          "estimated_complexity": 0.8,
+          "financial_domain": "transaction_optimization",
+          "compliance_requirements": [],
+          "execution_phases": [
+            {
+              "phase": "performance_analysis",
+              "agent": "dwaybank-performance",
+              "duration": "40%"
+            },
+            {
+              "phase": "backend_optimization",
+              "agent": "dwaybank-backend",
+              "duration": "40%"
+            },
+            {
+              "phase": "infrastructure_scaling",
+              "agent": "dwaybank-devops",
+              "duration": "20%"
+            }
+          ]
+        }
+      },
+      
+      "generic_command_mappings": {
+        "analyze": {
+          "keyword_triggers": ["analyze", "investigation", "root cause", "troubleshoot"],
+          "default_agent": "dwaybank-analyzer",
+          "complexity_threshold": 0.6,
+          "supporting_agents": {
+            "security_analysis": ["dwaybank-security"],
+            "performance_analysis": ["dwaybank-performance"],
+            "architecture_analysis": ["dwaybank-architect"]
+          }
+        },
+        
+        "implement": {
+          "keyword_triggers": ["implement", "build", "create", "develop"],
+          "default_agent": "dwaybank-backend",
+          "complexity_threshold": 0.5,
+          "context_based_selection": {
+            "frontend": "dwaybank-frontend",
+            "ui": "dwaybank-frontend",
+            "api": "dwaybank-backend",
+            "database": "dwaybank-backend",
+            "security": "dwaybank-security"
+          }
+        },
+        
+        "test": {
+          "keyword_triggers": ["test", "validate", "verify", "quality"],
+          "default_agent": "dwaybank-qa",
+          "complexity_threshold": 0.4,
+          "supporting_agents": {
+            "performance_testing": ["dwaybank-performance"],
+            "security_testing": ["dwaybank-security"],
+            "e2e_testing": ["dwaybank-qa"]
+          }
+        },
+        
+        "document": {
+          "keyword_triggers": ["document", "write", "guide", "manual"],
+          "default_agent": "dwaybank-scribe",
+          "complexity_threshold": 0.3,
+          "supporting_agents": {
+            "technical_documentation": ["dwaybank-mentor"],
+            "compliance_documentation": ["dwaybank-security"],
+            "user_documentation": ["dwaybank-frontend"]
+          }
+        },
+        
+        "refactor": {
+          "keyword_triggers": ["refactor", "cleanup", "improve", "optimize"],
+          "default_agent": "dwaybank-refactorer",
+          "complexity_threshold": 0.5,
+          "supporting_agents": {
+            "performance_refactoring": ["dwaybank-performance"],
+            "security_refactoring": ["dwaybank-security"],
+            "architecture_refactoring": ["dwaybank-architect"]
+          }
+        },
+        
+        "deploy": {
+          "keyword_triggers": ["deploy", "infrastructure", "devops", "automation"],
+          "default_agent": "dwaybank-devops",
+          "complexity_threshold": 0.6,
+          "supporting_agents": {
+            "security_deployment": ["dwaybank-security"],
+            "performance_monitoring": ["dwaybank-performance"]
+          }
+        }
+      },
+      
+      "workflow_patterns": {
+        "full_feature_development": {
+          "description": "Complete feature development from design to deployment",
+          "agent_sequence": [
+            {
+              "agent": "dwaybank-architect",
+              "phase": "design",
+              "duration": "15%",
+              "deliverables": ["system_design", "architecture_documentation"]
+            },
+            {
+              "agent": "dwaybank-backend",
+              "phase": "backend_implementation", 
+              "duration": "30%",
+              "deliverables": ["api_implementation", "database_schema"]
+            },
+            {
+              "agent": "dwaybank-frontend",
+              "phase": "frontend_implementation",
+              "duration": "25%",
+              "deliverables": ["ui_components", "user_workflows"]
+            },
+            {
+              "agent": "dwaybank-qa",
+              "phase": "testing",
+              "duration": "15%",
+              "deliverables": ["test_suite", "quality_validation"]
+            },
+            {
+              "agent": "dwaybank-security",
+              "phase": "security_review",
+              "duration": "10%",
+              "deliverables": ["security_assessment", "compliance_validation"]
+            },
+            {
+              "agent": "dwaybank-devops",
+              "phase": "deployment",
+              "duration": "5%",
+              "deliverables": ["deployment_automation", "monitoring_setup"]
+            }
+          ],
+          "estimated_total_time": "2-4 weeks",
+          "complexity_range": [0.7, 1.0]
+        },
+        
+        "security_audit_workflow": {
+          "description": "Comprehensive security audit and remediation",
+          "agent_sequence": [
+            {
+              "agent": "dwaybank-security",
+              "phase": "threat_modeling",
+              "duration": "30%",
+              "deliverables": ["threat_assessment", "risk_analysis"]
+            },
+            {
+              "agent": "dwaybank-analyzer",
+              "phase": "vulnerability_assessment",
+              "duration": "40%", 
+              "deliverables": ["vulnerability_report", "impact_analysis"]
+            },
+            {
+              "agent": "dwaybank-backend",
+              "phase": "remediation_implementation",
+              "duration": "20%",
+              "deliverables": ["security_fixes", "hardening_implementation"]
+            },
+            {
+              "agent": "dwaybank-scribe",
+              "phase": "documentation",
+              "duration": "10%",
+              "deliverables": ["audit_report", "compliance_documentation"]
+            }
+          ],
+          "estimated_total_time": "1-2 weeks",
+          "complexity_range": [0.8, 1.0]
+        },
+        
+        "performance_optimization_workflow": {
+          "description": "System performance analysis and optimization",
+          "agent_sequence": [
+            {
+              "agent": "dwaybank-performance",
+              "phase": "performance_analysis",
+              "duration": "40%",
+              "deliverables": ["performance_report", "bottleneck_identification"]
+            },
+            {
+              "agent": "dwaybank-backend",
+              "phase": "backend_optimization",
+              "duration": "30%",
+              "deliverables": ["optimized_queries", "efficient_algorithms"]
+            },
+            {
+              "agent": "dwaybank-frontend",
+              "phase": "frontend_optimization",
+              "duration": "20%",
+              "deliverables": ["optimized_components", "bundle_optimization"]
+            },
+            {
+              "agent": "dwaybank-devops",
+              "phase": "infrastructure_optimization",
+              "duration": "10%",
+              "deliverables": ["scaling_configuration", "monitoring_enhancement"]
+            }
+          ],
+          "estimated_total_time": "1-3 weeks",
+          "complexity_range": [0.6, 0.9]
+        }
+      },
+      
+      "context_based_routing": {
+        "financial_keywords": {
+          "payment": ["dwaybank-backend", "dwaybank-security"],
+          "transaction": ["dwaybank-backend", "dwaybank-performance"],
+          "account": ["dwaybank-backend", "dwaybank-frontend"],
+          "compliance": ["dwaybank-security", "dwaybank-scribe"],
+          "audit": ["dwaybank-security", "dwaybank-analyzer"],
+          "trading": ["dwaybank-frontend", "dwaybank-performance"],
+          "banking": ["dwaybank-architect", "dwaybank-backend"],
+          "fintech": ["dwaybank-architect", "dwaybank-security"]
+        },
+        
+        "technical_keywords": {
+          "api": ["dwaybank-backend"],
+          "database": ["dwaybank-backend", "dwaybank-performance"],
+          "frontend": ["dwaybank-frontend"],
+          "ui": ["dwaybank-frontend"],
+          "ux": ["dwaybank-frontend"],
+          "security": ["dwaybank-security"],
+          "performance": ["dwaybank-performance"],
+          "testing": ["dwaybank-qa"],
+          "documentation": ["dwaybank-scribe"],
+          "architecture": ["dwaybank-architect"],
+          "infrastructure": ["dwaybank-devops"]
+        },
+        
+        "complexity_indicators": {
+          "high_complexity": ["comprehensive", "enterprise", "large-scale", "complex", "advanced"],
+          "medium_complexity": ["moderate", "standard", "typical", "normal"],
+          "low_complexity": ["simple", "basic", "straightforward", "quick"]
+        }
+      },
+      
+      "agent_coordination_rules": {
+        "mandatory_collaborations": {
+          "financial_implementation": {
+            "primary": "dwaybank-backend",
+            "mandatory_reviews": ["dwaybank-security"],
+            "recommended_support": ["dwaybank-qa"]
+          },
+          "security_changes": {
+            "primary": "dwaybank-security", 
+            "mandatory_reviews": ["dwaybank-analyzer"],
+            "recommended_support": ["dwaybank-scribe"]
+          },
+          "architecture_decisions": {
+            "primary": "dwaybank-architect",
+            "mandatory_reviews": ["dwaybank-security", "dwaybank-performance"],
+            "recommended_support": ["dwaybank-mentor"]
+          }
+        },
+        
+        "escalation_paths": {
+          "technical_conflicts": "dwaybank-architect",
+          "security_concerns": "dwaybank-security", 
+          "compliance_issues": "dwaybank-security",
+          "performance_degradation": "dwaybank-performance",
+          "quality_failures": "dwaybank-qa"
+        },
+        
+        "resource_sharing": {
+          "mcp_servers": {
+            "sequential": ["dwaybank-architect", "dwaybank-security", "dwaybank-analyzer"],
+            "context7": ["dwaybank-backend", "dwaybank-mentor", "dwaybank-scribe"],
+            "magic": ["dwaybank-frontend"],
+            "playwright": ["dwaybank-performance", "dwaybank-qa"]
+          },
+          "concurrent_limits": {
+            "sequential": 2,
+            "context7": 3,
+            "magic": 1,
+            "playwright": 2
+          }
+        }
+      }
+    }
+  }
+}"
