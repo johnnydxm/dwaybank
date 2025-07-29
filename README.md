@@ -29,15 +29,20 @@ This repository contains the **Foundation Layer** implementation focusing on:
 
 ### 1. Clone and Setup
 ```bash
-git clone <repository-url>
+git clone https://github.com/johnnydxm/dwaybank.git
 cd dwaybank
 npm install
 ```
 
 ### 2. Environment Configuration
 ```bash
+# Copy environment template and configure your values
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env with your secure database passwords, JWT secrets, and API keys
+
+# For Docker development, use the provided template:
+cp .env.docker .env
+# Then customize the values as needed
 ```
 
 ### 3. Start with Docker (Recommended)
@@ -46,7 +51,7 @@ cp .env.example .env
 npm run docker:run
 
 # API will be available at http://localhost:3000
-# pgAdmin at http://localhost:8080 (admin@dwaybank.dev / admin123)
+# pgAdmin at http://localhost:8080 (admin@dwaybank.dev / use your PGADMIN_PASSWORD)
 # Redis Commander at http://localhost:8081
 ```
 

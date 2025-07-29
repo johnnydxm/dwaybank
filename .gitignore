@@ -92,6 +92,18 @@ keys/
 secrets/
 jwt-keys/
 ssl/
+.env.docker
+.env.local
+.env.production
+.env.staging
+*.key.json
+service-account*.json
+gcp-*.json
+aws-credentials*
+azure-credentials*
+wallet-keys/
+private-keys/
+crypto-keys/
 
 # ============================================================================
 # TESTING
