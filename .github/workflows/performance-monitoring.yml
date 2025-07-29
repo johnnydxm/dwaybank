@@ -1,0 +1,207 @@
+name: Performance Monitoring & Benchmarks
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    # Run performance tests daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  performance-baseline:
+    name: Performance Baseline Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: dwaybank_perf
+          POSTGRES_USER: perf_user
+          POSTGRES_PASSWORD: perf_password
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm install -g artillery
+
+      - name: Build application
+        run: npm run build
+
+      - name: Setup test database
+        run: npm run migrate
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: dwaybank_perf
+          DB_USER: perf_user
+          DB_PASSWORD: perf_password
+
+      - name: Start application
+        run: |
+          nohup npm start &
+          sleep 10
+        env:
+          NODE_ENV: production
+          PORT: 3000
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: dwaybank_perf
+          DB_USER: perf_user
+          DB_PASSWORD: perf_password
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: perf-test-secret
+          SESSION_SECRET: perf-session-secret
+
+      - name: Wait for startup
+        run: timeout 60 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+
+      - name: Run load tests
+        run: |
+          cat > artillery-config.yml << EOF
+          config:
+            target: 'http://localhost:3000'
+            phases:
+              - duration: 60
+                arrivalRate: 10
+                name: "Warm up"
+              - duration: 120
+                arrivalRate: 50
+                name: "Sustained load"
+              - duration: 60
+                arrivalRate: 100
+                name: "Peak load"
+            processor: "./performance-tests.js"
+          scenarios:
+            - name: "Authentication flow"
+              weight: 50
+              flow:
+                - post:
+                    url: "/api/auth/register"
+                    json:
+                      email: "test{{ \$randomString() }}@example.com"
+                      password: "TestPassword123!"
+                      firstName: "Test"
+                      lastName: "User"
+                - post:
+                    url: "/api/auth/login"
+                    json:
+                      email: "{{ email }}"
+                      password: "TestPassword123!"
+            - name: "Health check"
+              weight: 30
+              flow:
+                - get:
+                    url: "/health"
+            - name: "Profile access"
+              weight: 20
+              flow:
+                - get:
+                    url: "/api/user/profile"
+                    headers:
+                      Authorization: "Bearer {{ token }}"
+          EOF
+          
+          echo "module.exports = { setToken: function(req, res, ctx, ee, next) { if (res.body && res.body.token) { ctx.vars.token = res.body.token; } return next(); } };" > performance-tests.js
+          
+          artillery run artillery-config.yml --output performance-results.json
+
+      - name: Generate performance report
+        run: |
+          artillery report performance-results.json --output performance-report.html
+          
+          # Extract key metrics
+          node -e "
+          const fs = require('fs');
+          const results = JSON.parse(fs.readFileSync('performance-results.json', 'utf8'));
+          const summary = results.aggregate;
+          
+          console.log('## Performance Test Results');
+          console.log('- Total Requests:', summary.counters['http.requests']);
+          console.log('- Response Time P95:', summary.summaries['http.response_time'].p95, 'ms');
+          console.log('- Response Time P99:', summary.summaries['http.response_time'].p99, 'ms');
+          console.log('- Error Rate:', (summary.counters['http.codes.400'] || 0 + summary.counters['http.codes.500'] || 0) / summary.counters['http.requests'] * 100, '%');
+          console.log('- Requests per Second:', summary.rates['http.request_rate']);
+          " > performance-summary.txt
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-results
+          path: |
+            performance-results.json
+            performance-report.html
+            performance-summary.txt
+
+      - name: Comment PR with performance results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('performance-summary.txt', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📊 Performance Test Results\n\n\`\`\`\n${summary}\n\`\`\`\n\n[View detailed report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            });
+
+  memory-profiling:
+    name: Memory & Resource Profiling
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run memory profiling
+        run: |
+          node --inspect --heap-prof --heap-prof-interval=100 dist/server.js &
+          SERVER_PID=$!
+          sleep 30
+          kill $SERVER_PID || true
+          
+          # Generate memory report
+          ls -la *.heapprofile || echo "No heap profiles generated"
+
+      - name: Upload profiling results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: memory-profiles
+          path: "*.heapprofile"
