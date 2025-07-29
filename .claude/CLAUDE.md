@@ -90,11 +90,21 @@ Follow clean, structured folder organization as defined in `.claude/commands/REA
 dwaybank/
 ├── .claude/agents/           # Agent configurations
 ├── .taskmaster/             # TaskMaster coordination
+│   ├── docs/                # TaskMaster-parseable documents (PRDs, specs)
+│   ├── templates/           # Document templates for TaskMaster format
+│   ├── configs/             # Agent coordination configurations
+│   └── logs/                # Coordination and monitoring logs
 ├── src/                     # Clean source code structure
 ├── tests/                   # Organized test files
-├── docs/                    # Project documentation
+├── docs/                    # Project documentation (human-readable)
 └── scripts/                 # Utility scripts
 ```
+
+### Document Storage Standards
+- **TaskMaster Documents**: Store in `.taskmaster/docs/` with `<context>` and `<PRD>` formatting
+- **PRDs and Technical Specs**: Must use example format from `.taskmaster/templates/example_prd.txt`
+- **Human Documentation**: Store in `docs/` for regular project documentation
+- **Agent Parsing**: Only documents in `.taskmaster/docs/` will be parsed by TaskMaster agents
 
 **Project Type**: Enterprise Financial Platform  
 **Security Level**: Critical  

@@ -1,29 +1,188 @@
-# Logs
-logs
+# ============================================================================
+# DWAYBANK SMART WALLET - GIT IGNORE CONFIGURATION
+# ============================================================================
+
+# ============================================================================
+# DEPENDENCIES
+# ============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+package-lock.json
+yarn.lock
+.yarn/
+.pnp
+.pnp.js
+
+# ============================================================================
+# ENVIRONMENT & CONFIGURATION
+# ============================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# ============================================================================
+# BUILD & DISTRIBUTION
+# ============================================================================
+dist/
+build/
+out/
+.next/
+coverage/
+.nyc_output/
+*.tgz
+*.tar.gz
+
+# ============================================================================
+# LOGS
+# ============================================================================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+.npm
 dev-debug.log
 
-# Dependency directories
-node_modules/
+# ============================================================================
+# RUNTIME & CACHE
+# ============================================================================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+*.pid
+*.seed
+*.pid.lock
 
-# Environment variables
-.env
+# ============================================================================
+# DATABASES & STORAGE
+# ============================================================================
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+redis-dump.rdb
+dump.rdb
 
-# Editor directories and files
-.idea
-.vscode
+# ============================================================================
+# UPLOADS & MEDIA
+# ============================================================================
+uploads/
+temp/
+tmp/
+*.tmp
+
+# ============================================================================
+# SECURITY & KEYS
+# ============================================================================
+*.pem
+*.key
+*.cert
+*.p12
+*.pfx
+.ssh/
+keys/
+secrets/
+jwt-keys/
+ssl/
+
+# ============================================================================
+# TESTING
+# ============================================================================
+test-results/
+test-report.xml
+coverage/
+.nyc_output/
+*.lcov
+jest-coverage/
+
+# ============================================================================
+# IDE & EDITORS
+# ============================================================================
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+*~
 
-# OS specific
+# ============================================================================
+# OS GENERATED FILES
+# ============================================================================
+# macOS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Icon?
 
-# Task files
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# ============================================================================
+# DOCKER
+# ============================================================================
+.dockerignore
+docker-compose.override.yml
+.docker/
+
+# ============================================================================
+# MONITORING & PROFILING
+# ============================================================================
+.clinic/
+.0x/
+profile/
+*.heapsnapshot
+*.cpuprofile
+
+# ============================================================================
+# MISCELLANEOUS
+# ============================================================================
+.serverless/
+.aws-sam/
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# ============================================================================
+# PROJECT SPECIFIC
+# ============================================================================
+# DwayBank specific ignores
+/database/backups/
+/docs/private/
+/scripts/private/
+*.backup
+*.dump
+
+# Task files (preserved from original)
 # tasks.json
 # tasks/ 

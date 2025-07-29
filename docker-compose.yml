@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # DwayBank Backend API
+  dwaybank-api:
+    build:
+      context: .
+      target: development
+    container_name: dwaybank-api
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=dwaybank_dev
+      - DB_USER=dwaybank
+      - DB_PASSWORD=dwaybank_secure_2024
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=dwaybank_jwt_secret_development_only
+      - JWT_REFRESH_SECRET=dwaybank_refresh_secret_development_only
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - dwaybank-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: dwaybank-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=dwaybank_dev
+      - POSTGRES_USER=dwaybank
+      - POSTGRES_PASSWORD=dwaybank_secure_2024
+      - POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - dwaybank-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dwaybank -d dwaybank_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: dwaybank-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass dwaybank_redis_2024 --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - dwaybank-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --pass dwaybank_redis_2024 ping | grep PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # pgAdmin (Database Management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: dwaybank-pgadmin
+    ports:
+      - "8080:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@dwaybank.dev
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - dwaybank-network
+    restart: unless-stopped
+
+  # Redis Commander (Redis Management)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: dwaybank-redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:dwaybank_redis_2024
+    depends_on:
+      - redis
+    networks:
+      - dwaybank-network
+    restart: unless-stopped
+
+networks:
+  dwaybank-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local

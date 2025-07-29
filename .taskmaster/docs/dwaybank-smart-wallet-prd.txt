@@ -1,0 +1,222 @@
+<context>
+# Overview  
+DwayBank Smart Wallet is a unified financial management platform that aggregates traditional payment methods (Apple/Google Pay cards) with cryptocurrency wallets, providing AI-powered risk controls and regulatory compliance monitoring. 
+
+**Problem**: Users manage money across 8-12 different apps/wallets with no unified control, risk management, or compliance oversight.
+
+**Solution**: "The first app that lets you manage all your money - cards, crypto, everything - with intelligent controls and compliance built-in."
+
+**Value**: 85% complexity reduction from full banking platform while maintaining evolution path, 80% infrastructure cost savings, 60% faster time-to-market.
+
+**Target Users**: Digital Finance Power Users (28-45, $75K-150K income, 5+ financial apps, crypto portfolios >$5K)
+
+# Core Features  
+**F1: Wallet Aggregation**
+- What it does: Connects Apple Pay, Google Pay, MetaMask, manual cards into unified dashboard
+- Why important: Eliminates fragmented financial view, provides complete money management
+- How it works: OAuth 2.0 API integrations with real-time balance aggregation and encrypted storage
+
+**F2: Smart Risk Controls**  
+- What it does: AI-powered spending limits, merchant blocking, geo-restrictions, crypto exposure limits
+- Why important: Cross-platform fraud protection and intelligent spending management
+- How it works: Real-time transaction screening with ML-based risk scoring and automated enforcement
+
+**F3: AI Insights Engine**
+- What it does: Personalized spending analysis, fraud detection, investment recommendations
+- Why important: Transforms transaction data into actionable financial intelligence
+- How it works: Machine learning models analyze patterns, generate insights, predict risks
+
+**F4: Unified Transfer System**
+- What it does: Move money between any connected payment methods (card-to-card, crypto-to-fiat, etc.)
+- Why important: Eliminates transfer friction across different financial ecosystems
+- How it works: Multi-rail payment processing with atomic transactions and compliance screening
+
+**F5: Compliance Automation**
+- What it does: Built-in KYC/AML monitoring, tax reporting, regulatory compliance
+- Why important: Automates complex financial compliance without user intervention
+- How it works: Integration with KYC providers, AML screening APIs, automated regulatory reporting
+
+# User Experience  
+**Primary Persona: "Alex" - Digital Finance Power User**
+- Demographics: 28-45 years old, $75-150K income, tech-savvy professional
+- Behavior: Uses 5+ financial apps daily, owns cryptocurrency, values control and security
+- Goals: Unified financial view, intelligent spending controls, seamless money movement
+- Pain Points: Fragmented apps, no cross-platform controls, manual compliance processes
+
+**Key User Flows:**
+1. **Onboarding Flow**: Download → Create account → KYC verification → Connect first wallet → Set risk preferences → View unified dashboard
+2. **Daily Usage Flow**: Open app → Check portfolio dashboard → Review AI insights → Adjust risk controls if needed
+3. **Transfer Flow**: Select transfer → Choose source/destination → Enter amount → Review fees → Confirm with biometric → Track status
+
+**UI/UX Considerations:**
+- Mobile-first design (iOS/Android native apps)
+- Security-first interactions (biometric authentication, encrypted data display)
+- Progressive Web App for desktop users
+- WCAG 2.1 AA accessibility compliance
+- Dark/light theme support
+</context>
+<PRD>
+# Technical Architecture  
+**System Components:**
+- **Frontend Layer**: React Native mobile apps + PWA dashboard
+- **API Gateway**: Kong/Nginx with authentication, rate limiting, load balancing
+- **Microservices**: User service, wallet service, risk service, AI service, transfer service, compliance service
+- **Ledger Core**: Blnk double-entry accounting system with multi-currency support
+- **Data Layer**: PostgreSQL + Redis + Event Store + InfluxDB for time-series data
+- **External Integrations**: Apple Pay, Google Pay, MetaMask, KYC providers, risk APIs
+
+**Data Models:**
+```
+Users: id, email, kyc_status, risk_profile, created_at
+ConnectedWallets: id, user_id, type, identifier, metadata, is_active, last_sync  
+Transactions: id, user_id, wallet_id, amount, currency, type, risk_score, compliance_status
+RiskProfiles: user_id, daily_limit, blocked_merchants, allowed_countries, crypto_exposure_limit
+```
+
+**APIs and Integrations:**
+- Apple Pay PassKit API for card integration
+- Google Pay API for card data access
+- MetaMask/WalletConnect for crypto wallet connections
+- Jumio/Onfido for KYC identity verification
+- Sift/Forter for fraud detection and risk scoring
+- Exchange APIs (Coinbase, Binance) for crypto data
+
+**Infrastructure Requirements:**
+- AWS/GCP cloud deployment with Kubernetes orchestration
+- PostgreSQL 14+ with read replicas for scaling
+- Redis 7+ cluster for caching and session management
+- Prometheus + Grafana for monitoring and alerting
+- ELK stack for logging and audit trail management
+
+# Development Roadmap  
+**MVP Phase 1: Wallet Aggregation Foundation (Months 1-2)**
+- User authentication and KYC integration
+- Apple Pay and Google Pay API integrations
+- MetaMask wallet connection via WalletConnect
+- Basic portfolio dashboard with real-time balance aggregation
+- Encrypted storage system for sensitive financial data
+- Basic risk profile setup and management
+
+**MVP Phase 2: Smart Controls & AI (Months 2-3)**
+- Risk monitoring engine with real-time transaction screening
+- AI insights engine for spending pattern analysis
+- Fraud detection system with ML-based anomaly detection
+- Risk control interfaces (spending limits, merchant blocking, geo-restrictions)
+- Alert and notification system for risk events
+- Personalized recommendation engine
+
+**MVP Phase 3: Transfer & Compliance (Months 3-4)**
+- Unified transfer interface for multi-rail payments
+- Card-to-card transfer capabilities via payment processors
+- Crypto transfer functionality to external wallets
+- Enhanced AML compliance screening and monitoring
+- Automated regulatory reporting and audit trail generation
+- Tax document generation and compliance automation
+
+**Evolution Phase 4: Banking Platform (6-18 months)**
+- Migration from Blnk to Midaz ledger for advanced financial operations
+- Apache Fineract integration for full banking services (savings, loans, credit)
+- Hyperledger Fabric implementation for regulatory compliance and transparency
+- Multi-currency accounts and international transfer capabilities
+- Advanced investment platform with robo-advisor features
+- Business banking services and API platform for partners
+
+# Logical Dependency Chain
+**Foundation Layer (Must build first):**
+1. User authentication system with MFA and KYC integration
+2. Database schema and core data models for users and wallets
+3. API gateway with security, rate limiting, and load balancing
+4. Blnk ledger integration for transaction recording and balance management
+
+**Wallet Integration Layer (Builds on foundation):**
+5. Apple Pay API integration with secure token handling
+6. Google Pay API integration with encrypted data storage  
+7. MetaMask connection via WalletConnect protocol
+8. Portfolio dashboard with real-time balance aggregation
+9. Manual card addition with PCI-compliant tokenization
+
+**Intelligence Layer (Requires wallet data):**
+10. Risk monitoring engine with transaction screening
+11. AI insights engine with ML model deployment
+12. Fraud detection system with anomaly detection
+13. Alert and notification system with real-time updates
+
+**Transfer Layer (Requires all previous layers):**
+14. Multi-rail payment processing infrastructure
+15. Card-to-card transfer capabilities
+16. Crypto transfer functionality with multi-signature security
+17. Fee calculation and optimization engine
+
+**Compliance Layer (Integrates across all layers):**
+18. Enhanced AML screening with sanctions list checking
+19. Regulatory reporting automation with audit trail
+20. Tax document generation and compliance workflows
+
+**Quick Usable Frontend Priority:**
+- Start with portfolio dashboard showing connected wallets and balances
+- Add wallet connection flows early for immediate user value
+- Implement basic risk controls before advanced AI features
+- Ensure transfer functionality works before advanced compliance features
+
+**Atomic Feature Scoping:**
+- Each wallet integration (Apple Pay, Google Pay, MetaMask) is independent and atomic
+- Risk controls can be implemented incrementally (spending limits → merchant blocking → geo-restrictions)
+- AI insights can start basic (spending categorization) and evolve to advanced (investment recommendations)
+- Transfer capabilities can begin with single rails and expand to multi-rail support
+
+# Risks and Mitigations  
+**Technical Challenges:**
+- Risk: Integration API failures or rate limiting from wallet providers
+- Mitigation: Implement robust fallback mechanisms, caching strategies, and multiple data source redundancy
+
+- Risk: Real-time transaction processing performance bottlenecks
+- Mitigation: Horizontal scaling with microservices, Redis caching, and database read replicas
+
+- Risk: Security vulnerabilities in financial data handling
+- Mitigation: Security-first architecture, regular penetration testing, encrypted storage, and audit logging
+
+**MVP Development Challenges:**
+- Risk: Feature scope creep beyond 4-month timeline
+- Mitigation: Strict MVP focus on wallet aggregation core value, defer advanced features to evolution phases
+
+- Risk: Third-party API integration complexity underestimated
+- Mitigation: Proof-of-concept integrations early in development, fallback plans for complex integrations
+
+- Risk: Regulatory compliance requirements more complex than anticipated
+- Mitigation: Legal advisory engagement, regulatory sandbox participation, simplified compliance for MVP
+
+**Resource Constraints:**
+- Risk: Limited development team bandwidth for simultaneous platform development
+- Mitigation: Prioritize mobile-first development, use proven technology stack, leverage open-source components
+
+- Risk: Infrastructure costs exceeding budget projections
+- Mitigation: Start with single-region deployment, use cost monitoring and alerts, implement auto-scaling
+
+- Risk: User adoption slower than projected requiring pivot
+- Mitigation: Early user feedback collection, rapid iteration capability, clear success metrics definition
+
+# Appendix  
+**Research Findings:**
+- Market analysis shows 850B global digital wallet market with 45B US/EU aggregation opportunity
+- User research indicates 8-12 app fragmentation as primary pain point for target demographic
+- Competitive analysis reveals no existing solution combining traditional + crypto with AI controls
+- Technical feasibility confirmed for all major wallet API integrations
+
+**Open-Source Technology Evolution Strategy:**
+- Phase 1: Blnk ledger for rapid MVP deployment and transaction recording
+- Phase 2: Midaz integration for enterprise-grade financial operations and hierarchy
+- Phase 3: Apache Fineract for full banking platform capabilities
+- Phase 4: Hyperledger Fabric for regulatory transparency and blockchain compliance
+
+**Success Metrics:**
+- User Acquisition: 1,000 users in 3 months, 80% wallet connection rate
+- Engagement: 40% daily active usage, 70% 30-day retention
+- Technical: <500ms API response time, 99.5% uptime, <5% fraud false positives
+- Financial: <$50 CAC, >$200 CLV, 3:1 CLV:CAC ratio by Month 6
+
+**Agent Coordination Requirements:**
+- 8 active agents for MVP vs 18 for full platform (55% reduction)
+- Coalition formation: architect + frontend + backend + security + devops + qa + design + orchestrator
+- MCP server utilization: Sequential for analysis, Context7 for documentation, Magic for UI, Playwright for testing
+- Resource allocation: Priority-based with security and architect agents having highest allocation weights
+</PRD>
