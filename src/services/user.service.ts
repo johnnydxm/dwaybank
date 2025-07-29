@@ -469,6 +469,187 @@ export class UserService {
   }
 
   /**
+   * Generate password reset token
+   */
+  public async generatePasswordResetToken(userId: string): Promise<string> {
+    try {
+      // Generate a secure random token
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await pool.query(`
+        INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET token = $2, expires_at = $3, created_at = CURRENT_TIMESTAMP
+      `, [userId, token, expiresAt]);
+
+      auditLogger.info('Password reset token generated', {
+        userId,
+        expiresAt,
+      });
+
+      return token;
+    } catch (error) {
+      logger.error('Failed to generate password reset token', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId,
+      });
+      throw new Error('Failed to generate password reset token');
+    }
+  }
+
+  /**
+   * Reset password using token
+   */
+  public async resetPassword(token: string, newPassword: string): Promise<boolean> {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Verify token and get user
+      const tokenResult = await client.query(`
+        SELECT rt.user_id, rt.expires_at, u.email
+        FROM password_reset_tokens rt
+        JOIN users u ON rt.user_id = u.id
+        WHERE rt.token = $1 AND rt.expires_at > CURRENT_TIMESTAMP
+          AND u.deleted_at IS NULL
+      `, [token]);
+
+      if (tokenResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return false;
+      }
+
+      const { user_id: userId, email } = tokenResult.rows[0];
+
+      // Hash new password
+      const newPasswordHash = await this.hashPassword(newPassword);
+
+      // Update password
+      await client.query(`
+        UPDATE users 
+        SET password_hash = $1, password_changed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [newPasswordHash, userId]);
+
+      // Delete the used token
+      await client.query(`
+        DELETE FROM password_reset_tokens WHERE token = $1
+      `, [token]);
+
+      await client.query('COMMIT');
+
+      auditLogger.info('Password reset successful', {
+        userId,
+        email,
+      });
+
+      return true;
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to reset password', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Generate email verification token
+   */
+  public async generateEmailVerificationToken(userId: string): Promise<string> {
+    try {
+      // Generate a secure random token
+      const crypto = await import('crypto');
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      await pool.query(`
+        INSERT INTO email_verification_tokens (user_id, token, expires_at, created_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET token = $2, expires_at = $3, created_at = CURRENT_TIMESTAMP
+      `, [userId, token, expiresAt]);
+
+      auditLogger.info('Email verification token generated', {
+        userId,
+        expiresAt,
+      });
+
+      return token;
+    } catch (error) {
+      logger.error('Failed to generate email verification token', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId,
+      });
+      throw new Error('Failed to generate email verification token');
+    }
+  }
+
+  /**
+   * Verify email using token
+   */
+  public async verifyEmailWithToken(token: string): Promise<boolean> {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Verify token and get user
+      const tokenResult = await client.query(`
+        SELECT et.user_id, et.expires_at, u.email
+        FROM email_verification_tokens et
+        JOIN users u ON et.user_id = u.id
+        WHERE et.token = $1 AND et.expires_at > CURRENT_TIMESTAMP
+          AND u.deleted_at IS NULL
+      `, [token]);
+
+      if (tokenResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return false;
+      }
+
+      const { user_id: userId, email } = tokenResult.rows[0];
+
+      // Mark email as verified
+      await client.query(`
+        UPDATE users 
+        SET email_verified = TRUE, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [userId]);
+
+      // Delete the used token
+      await client.query(`
+        DELETE FROM email_verification_tokens WHERE token = $1
+      `, [token]);
+
+      await client.query('COMMIT');
+
+      auditLogger.info('Email verified with token', {
+        userId,
+        email,
+      });
+
+      return true;
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('Failed to verify email with token', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * Verify user phone number
    */
   public async verifyPhone(userId: string): Promise<boolean> {

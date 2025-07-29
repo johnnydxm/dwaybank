@@ -4,7 +4,7 @@ module.exports = {
   testEnvironment: 'node',
 
   // Root directories
-  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  roots: ['<rootDir>/src'],
 
   // Test files patterns
   testMatch: [
@@ -48,11 +48,8 @@ module.exports = {
     '!src/types/**/*', // Exclude type definitions
   ],
 
-  // Setup files
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-
   // Module path mapping (matches tsconfig.json paths)
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@config/(.*)$': '<rootDir>/src/config/$1',
     '^@models/(.*)$': '<rootDir>/src/models/$1',
@@ -74,9 +71,6 @@ module.exports = {
   // Test timeout (30 seconds for integration tests)
   testTimeout: 30000,
 
-  // Global setup and teardown
-  globalSetup: '<rootDir>/tests/globalSetup.ts',
-  globalTeardown: '<rootDir>/tests/globalTeardown.ts',
 
   // Error on deprecated features
   errorOnDeprecated: true,
@@ -98,28 +92,7 @@ module.exports = {
   ],
 
   // Reporters
-  reporters: [
-    'default',
-    [
-      'jest-junit',
-      {
-        outputDirectory: './test-results',
-        outputName: 'junit.xml',
-        classNameTemplate: '{classname}',
-        titleTemplate: '{title}',
-        ancestorSeparator: ' › ',
-        usePathForSuiteName: true,
-      },
-    ],
-    [
-      'jest-html-reporters',
-      {
-        publicPath: './test-results',
-        filename: 'report.html',
-        expand: true,
-      },
-    ],
-  ],
+  reporters: ['default'],
 
   // Force exit after tests complete
   forceExit: true,

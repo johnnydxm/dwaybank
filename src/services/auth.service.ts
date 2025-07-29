@@ -1,6 +1,7 @@
 import { jwtService } from './jwt.service';
 import { userService } from './user.service';
 import { sessionService } from './session.service';
+import { mfaService } from './mfa.service';
 import logger, { auditLogger } from '../config/logger';
 import type { 
   LoginCredentials, 
@@ -153,10 +154,47 @@ export class AuthService {
         deviceType: context.deviceType,
       });
 
+      // Check if user has MFA enabled
+      const mfaMethods = await mfaService.getUserMFAMethods(user.id);
+      const activeMFAMethods = mfaMethods.filter(method => method.isEnabled);
+      const mfaRequired = activeMFAMethods.length > 0;
+
+      if (mfaRequired) {
+        // Don't issue full tokens yet, MFA verification needed
+        auditLogger.info('MFA verification required for login', {
+          userId: user.id,
+          sessionId: sessionResult.sessionId,
+          methodCount: activeMFAMethods.length,
+          ipAddress: context.ipAddress,
+        });
+
+        return {
+          user,
+          tokens: {
+            access_token: '', // Empty until MFA verified
+            refresh_token: '', // Empty until MFA verified
+            expires_in: 0,
+            token_type: 'Bearer',
+            scope: [],
+          },
+          mfa_required: true,
+          mfa_methods: activeMFAMethods.map(method => ({
+            id: method.id,
+            method: method.method,
+            isPrimary: method.isPrimary,
+            ...(method.phoneNumber && {
+              phoneNumber: `***-***-${method.phoneNumber.slice(-4)}`,
+            }),
+            ...(method.email && {
+              email: `${method.email.charAt(0)}***@${method.email.split('@')[1]}`,
+            }),
+          })),
+        };
+      }
+
       return {
         user,
         tokens,
-        // MFA would be checked here in the future
         mfa_required: false,
       };
 
@@ -164,6 +202,108 @@ export class AuthService {
       logger.error('Login process failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
         email: credentials.email,
+        ipAddress: context.ipAddress,
+      });
+
+      return null;
+    }
+  }
+
+  /**
+   * Complete MFA verification and issue tokens
+   */
+  public async completeMFALogin(
+    userId: string,
+    sessionId: string,
+    mfaCode: string,
+    context: AuthenticationContext,
+    configId?: string,
+    method?: 'totp' | 'sms' | 'email',
+    isBackupCode?: boolean
+  ): Promise<LoginResponse | null> {
+    try {
+      // Get user information
+      const user = await userService.getUserById(userId);
+      if (!user) {
+        auditLogger.warn('MFA completion attempted for non-existent user', {
+          userId,
+          ipAddress: context.ipAddress,
+        });
+        return null;
+      }
+
+      // Verify session is valid
+      const session = await sessionService.getSession(sessionId);
+      if (!session || session.status !== 'active') {
+        auditLogger.warn('MFA completion attempted with invalid session', {
+          userId,
+          sessionId,
+          ipAddress: context.ipAddress,
+        });
+        return null;
+      }
+
+      // Verify MFA code
+      const verificationResult = await mfaService.verifyCode({
+        userId,
+        code: mfaCode,
+        configId,
+        method,
+        isBackupCode,
+        context: {
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+          deviceFingerprint: context.deviceType,
+        },
+      });
+
+      if (!verificationResult.success) {
+        auditLogger.warn('MFA verification failed during login completion', {
+          userId,
+          sessionId,
+          error: verificationResult.error,
+          rateLimited: verificationResult.rateLimited,
+          ipAddress: context.ipAddress,
+        });
+        return null;
+      }
+
+      // Generate JWT tokens
+      const tokens = jwtService.generateTokenPair(user, {
+        sessionId,
+        tokenFamily: session.token_family,
+        scope: ['read', 'write'],
+        rememberMe: false, // TODO: Store remember me preference
+      });
+
+      // Update session with access token JTI
+      const accessTokenPayload = await jwtService.validateAccessToken(tokens.access_token);
+      if (accessTokenPayload.isValid && accessTokenPayload.payload) {
+        await sessionService.updateSessionActivity(sessionId);
+      }
+
+      auditLogger.info('MFA login completed successfully', {
+        userId,
+        sessionId,
+        method: verificationResult.method,
+        configId: verificationResult.configId,
+        isBackupCode,
+        remainingBackupCodes: verificationResult.remainingBackupCodes,
+        ipAddress: context.ipAddress,
+        deviceType: context.deviceType,
+      });
+
+      return {
+        user,
+        tokens,
+        mfa_required: false,
+      };
+
+    } catch (error) {
+      logger.error('MFA login completion failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId,
+        sessionId,
         ipAddress: context.ipAddress,
       });
 
@@ -426,6 +566,41 @@ export class AuthService {
       });
 
       return false;
+    }
+  }
+
+  /**
+   * Revoke all user sessions except current (for bulk termination)
+   */
+  public async revokeUserSessions(
+    userId: string,
+    excludeSessionId: string,
+    context: AuthenticationContext
+  ): Promise<number> {
+    try {
+      const revokedCount = await sessionService.revokeUserSessions(
+        userId,
+        excludeSessionId,
+        'user_bulk_revoked'
+      );
+
+      auditLogger.info('User sessions bulk revoked', {
+        userId,
+        excludeSessionId,
+        revokedCount,
+        ipAddress: context.ipAddress,
+      });
+
+      return revokedCount;
+
+    } catch (error) {
+      logger.error('Failed to revoke user sessions', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId,
+        excludeSessionId,
+      });
+
+      return 0;
     }
   }
 

@@ -5,9 +5,15 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { config, validateCriticalConfig } from './config/environment';
 import { initializeDatabases, closeDatabases, checkDatabaseHealth } from './config/database';
+import { initializeMFAService, setMFAService } from './services/mfa.service';
+import { initializeSecurityService, setSecurityService } from './services/security.service';
 import logger, { auditLogger, httpLogger, performanceLogger } from './config/logger';
 import { createServer } from 'http';
 import { performance } from 'perf_hooks';
+
+// Import routes
+import mfaRoutes from './routes/mfa.routes';
+import authRoutes from './routes/auth.routes';
 
 /**
  * DwayBank Smart Wallet Backend Server
@@ -34,7 +40,15 @@ class DwayBankServer {
       validateCriticalConfig();
       
       // Initialize database connections
-      await initializeDatabases();
+      const { postgres } = await initializeDatabases();
+      
+      // Initialize MFA service
+      const mfaServiceInstance = await initializeMFAService(postgres);
+      setMFAService(mfaServiceInstance);
+      
+      // Initialize Security service
+      const securityServiceInstance = await initializeSecurityService(postgres);
+      setSecurityService(securityServiceInstance);
       
       // Configure middleware
       this.configureMiddleware();
@@ -216,21 +230,11 @@ class DwayBankServer {
       });
     });
 
-    // Authentication routes (placeholder - will be implemented in next task)
-    this.app.use('/api/v1/auth', (req, res) => {
-      res.status(501).json({
-        error: 'Not Implemented',
-        message: 'Authentication endpoints are under development',
-        availableEndpoints: [
-          'POST /api/v1/auth/register',
-          'POST /api/v1/auth/login',
-          'POST /api/v1/auth/logout',
-          'POST /api/v1/auth/refresh',
-          'POST /api/v1/auth/verify-mfa',
-          'GET /api/v1/auth/profile',
-        ],
-      });
-    });
+    // MFA routes
+    this.app.use('/api/v1/mfa', mfaRoutes);
+
+    // Authentication routes
+    this.app.use('/api/v1/auth', authRoutes);
 
     // 404 handler
     this.app.use('*', (req, res) => {
