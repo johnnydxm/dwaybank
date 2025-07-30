@@ -1,0 +1,53 @@
+# DwayBank Smart Wallet - Git Attributes Configuration
+# Ensure GitHub properly detects TypeScript as the primary language
+
+# TypeScript files
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+
+# JavaScript files (only config and build)
+*.js linguist-language=JavaScript
+*.mjs linguist-language=JavaScript
+
+# Configuration files - don't count toward language stats
+*.json linguist-documentation
+*.yml linguist-documentation
+*.yaml linguist-documentation
+package.json linguist-documentation
+package-lock.json linguist-documentation
+tsconfig.json linguist-documentation
+jest.config.js linguist-documentation
+.eslintrc.js linguist-documentation
+docker-compose.yml linguist-documentation
+Dockerfile linguist-documentation
+
+# Documentation files
+*.md linguist-documentation
+*.txt linguist-documentation
+LICENSE linguist-documentation
+CONTRIBUTING.md linguist-documentation
+
+# Build and distribution files - exclude from language detection
+dist/* linguist-generated
+build/* linguist-generated
+coverage/* linguist-generated
+node_modules/* linguist-vendored
+
+# Database files
+*.sql linguist-language=SQL
+
+# Template files
+*.hbs linguist-language=Handlebars
+*.ejs linguist-language=EJS
+
+# GitHub specific files
+.github/* linguist-documentation
+
+# Environment files
+.env* linguist-documentation
+
+# Log files
+*.log linguist-generated
+
+# TypeScript declaration files
+*.d.ts linguist-generated
