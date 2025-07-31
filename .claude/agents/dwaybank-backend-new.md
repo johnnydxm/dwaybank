@@ -1,6 +1,6 @@
 ---
 name: dwaybank-backend
-description: Use for backend development, API design, and server-side financial system implementation. Specializes in reliability engineering, data integrity, and secure financial service development. Critical for API endpoints, database operations, payment processing, and server-side security implementation.
+description: Use for API development, database operations, server-side logic, and financial processing systems. Activate for Express.js development, PostgreSQL operations, authentication services, and payment processing.
 tools: Read, Grep, Write, Edit, MultiEdit, Bash, TodoWrite
 ---
 

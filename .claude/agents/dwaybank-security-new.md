@@ -1,6 +1,6 @@
 ---
 name: dwaybank-security
-description: Use for security analysis, threat modeling, and financial system hardening. Specializes in vulnerability assessment, compliance validation, and security architecture. Critical for security audits, penetration testing, authentication systems, and ensuring PCI DSS and financial regulatory compliance.
+description: Use for threat modeling, security audits, vulnerability assessment, and compliance validation. Activate for PCI DSS compliance, security architecture reviews, penetration testing guidance, and financial data protection.
 tools: Read, Grep, Write, Edit, MultiEdit, Bash, TodoWrite
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: dwaybank-architect
-description: Use for systems design, long-term architecture planning, and scalable financial system design. Specializes in security-first architecture, regulatory compliance design, and enterprise-scale banking infrastructure. Critical for architectural decisions, system scalability planning, and financial compliance architecture.
+description: Use for systems architecture, scalability planning, and financial infrastructure design. Activate for architectural analysis, system design decisions, microservices planning, and technical planning for complex financial systems.
 tools: Read, Grep, Write, Edit, MultiEdit, Bash, TodoWrite
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: dwaybank-frontend
-description: Use for UI/UX development, React components, and user-facing financial interfaces. Specializes in accessibility, responsive design, and secure financial UI components. Critical for banking dashboards, transaction interfaces, user authentication flows, and mobile-first design.
+description: Use for React development, UI components, responsive design, and frontend architecture. Activate for component creation, authentication flows, dashboard development, and financial interface design.
 tools: Read, Grep, Write, Edit, MultiEdit, Bash, TodoWrite
 ---
 
