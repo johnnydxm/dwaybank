@@ -26,6 +26,9 @@ const envSchema = Joi.object({
   DB_POOL_MAX: Joi.number().min(1).max(50).default(20),
   DB_POOL_MIN: Joi.number().min(1).max(20).default(5),
   DB_SSL: Joi.boolean().default(false),
+  DB_SSL_CA: Joi.string().allow(''),
+  DB_SSL_CERT: Joi.string().allow(''),
+  DB_SSL_KEY: Joi.string().allow(''),
   
   // Redis Configuration
   REDIS_HOST: Joi.string().required(),
@@ -38,7 +41,7 @@ const envSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
-  JWT_ALGORITHM: Joi.string().valid('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512').default('HS256'),
+  JWT_ALGORITHM: Joi.string().valid('HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512').default('HS384'),
   
   // Security Configuration
   BCRYPT_ROUNDS: Joi.number().min(10).max(15).default(12),

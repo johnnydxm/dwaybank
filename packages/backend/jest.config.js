@@ -13,10 +13,6 @@ module.exports = {
     '**/*.spec.ts',
   ],
 
-  // Transform files
-  transform: {
-    '^.+\\.ts$': 'ts-jest',
-  },
 
   // Coverage settings
   collectCoverage: true,
@@ -109,11 +105,19 @@ module.exports = {
   // Silent mode in CI
   silent: process.env.CI === 'true',
 
-  // TypeScript configuration
-  globals: {
-    'ts-jest': {
+  // Setup files
+  setupFilesAfterEnv: ['<rootDir>/src/test/setup.ts'],
+  
+  // Environment setup
+  testEnvironmentOptions: {
+    NODE_ENV: 'test',
+  },
+
+  // TypeScript configuration (Updated for ts-jest v29+)
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
       tsconfig: 'tsconfig.json',
       isolatedModules: true,
-    },
+    }],
   },
 };

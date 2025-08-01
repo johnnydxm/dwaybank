@@ -18,7 +18,15 @@ const dbConfig: PoolConfig = {
   min: parseInt(process.env.DB_POOL_MIN || '5'),  // Minimum pool size
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
   connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '5000'),
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: true,
+    ca: process.env.DB_SSL_CA || undefined,
+    cert: process.env.DB_SSL_CERT || undefined,
+    key: process.env.DB_SSL_KEY || undefined,
+    minVersion: 'TLSv1.2',
+    ciphers: 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384',
+    secureProtocol: 'TLSv1_2_method'
+  } : false,
 };
 
 // Create PostgreSQL connection pool

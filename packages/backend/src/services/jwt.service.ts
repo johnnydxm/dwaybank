@@ -59,7 +59,7 @@ export class JWTService {
       throw new Error('Access token and refresh token secrets must be different');
     }
 
-    const supportedAlgorithms = ['HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512'];
+    const supportedAlgorithms = ['HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512'];
     if (!supportedAlgorithms.includes(this.algorithm)) {
       throw new Error(`Unsupported JWT algorithm: ${this.algorithm}`);
     }

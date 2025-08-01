@@ -37,7 +37,15 @@ class DatabaseMigrator {
       database: config.database.name,
       user: config.database.user,
       password: config.database.password,
-      ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
+      ssl: config.database.ssl ? {
+        rejectUnauthorized: true,
+        ca: process.env.DB_SSL_CA || undefined,
+        cert: process.env.DB_SSL_CERT || undefined,
+        key: process.env.DB_SSL_KEY || undefined,
+        minVersion: 'TLSv1.2',
+        ciphers: 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-SHA256:ECDHE-RSA-AES256-SHA384',
+        secureProtocol: 'TLSv1_2_method'
+      } : false,
       max: 5, // Reduced pool size for migrations
     });
 
