@@ -14,6 +14,8 @@ import { performance } from 'perf_hooks';
 // Import routes
 import mfaRoutes from './routes/mfa.routes';
 import authRoutes from './routes/auth.routes';
+import accountRoutes from './routes/account.routes';
+import transactionRoutes from './routes/transaction.routes';
 
 /**
  * DwayBank Smart Wallet Backend Server
@@ -235,6 +237,10 @@ class DwayBankServer {
 
     // Authentication routes
     this.app.use('/api/v1/auth', authRoutes);
+
+    // Financial routes
+    this.app.use('/api/v1/accounts', accountRoutes);
+    this.app.use('/api/v1/transactions', transactionRoutes);
 
     // 404 handler
     this.app.use('*', (req, res) => {

@@ -35,15 +35,13 @@ export const pool = new Pool(dbConfig);
 // Handle PostgreSQL connection events
 pool.on('connect', (client) => {
   logger.info('PostgreSQL client connected', { 
-    processId: client.processID,
     database: dbConfig.database 
   });
 });
 
 pool.on('error', (err, client) => {
   logger.error('PostgreSQL client error', { 
-    error: err.message,
-    processId: client?.processID 
+    error: err.message
   });
 });
 
@@ -108,7 +106,7 @@ redis.on('reconnecting', () => {
 /**
  * Initialize database connections
  */
-export const initializeDatabases = async (): Promise<void> => {
+export const initializeDatabases = async (): Promise<{ postgres: Pool; redis: RedisClientType }> => {
   try {
     // Test PostgreSQL connection
     const client = await pool.connect();
@@ -121,6 +119,9 @@ export const initializeDatabases = async (): Promise<void> => {
       await redis.connect();
       logger.info('Redis connection established successfully');
     }
+
+    // Return the database instances
+    return { postgres: pool, redis };
 
   } catch (error) {
     logger.error('Database initialization failed', { 

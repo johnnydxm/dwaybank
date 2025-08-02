@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { handleApiError } from '../services/api';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,10 +47,16 @@ export default function RegisterPage() {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-      await register(registerData);
-      navigate('/dashboard');
+      const result = await register(registerData);
+      
+      if (result.verification_required) {
+        setSuccess('Registration successful! Please check your email to verify your account before logging in.');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const apiError = handleApiError(err);
+      setError(apiError.message);
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +90,12 @@ export default function RegisterPage() {
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
+              {success && (
+                <Alert>
+                  <AlertDescription>{success}</AlertDescription>
                 </Alert>
               )}
 

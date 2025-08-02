@@ -162,19 +162,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">DwayBank</h1>
-              <Badge variant="secondary">Dashboard</Badge>
+          <div className="flex justify-between items-center py-3 sm:py-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">DwayBank</h1>
+              <Badge variant="secondary" className="text-xs">Dashboard</Badge>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <Avatar>
-                <AvatarImage src={user?.profile_picture} />
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                <AvatarImage src={user?.profile_picture} alt="Profile picture" />
                 <AvatarFallback>
                   {user?.first_name?.[0]}{user?.last_name?.[0]}
                 </AvatarFallback>
@@ -185,7 +185,12 @@ export default function DashboardPage() {
                 </p>
                 <p className="text-xs text-gray-500">{user?.email}</p>
               </div>
-              <Button variant="outline" onClick={logout}>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={logout}
+                className="min-h-[40px] hidden sm:flex"
+              >
                 Sign out
               </Button>
             </div>
@@ -194,9 +199,11 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8" role="main" aria-label="Dashboard content">
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <section aria-labelledby="overview-heading" className="mb-6 sm:mb-8">
+          <h2 id="overview-heading" className="sr-only">Account Overview</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
@@ -204,12 +211,22 @@ export default function DashboardPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowBalances(!showBalances)}
+                className="min-h-[44px] min-w-[44px]"
+                aria-label={showBalances ? 'Hide balance amounts' : 'Show balance amounts'}
+                aria-pressed={!showBalances}
               >
-                {showBalances ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                {showBalances ? 
+                  <Eye className="h-4 w-4" aria-hidden="true" /> : 
+                  <EyeOff className="h-4 w-4" aria-hidden="true" />
+                }
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div 
+                className="text-xl sm:text-2xl font-bold" 
+                aria-live="polite"
+                aria-label={showBalances ? `Total balance: ${formatCurrency(getTotalBalance(), 'USD')}` : 'Balance hidden'}
+              >
                 {showBalances ? formatCurrency(getTotalBalance(), 'USD') : '••••'}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -224,7 +241,7 @@ export default function DashboardPage() {
               <Wallet className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{wallets.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">{wallets.length}</div>
               <p className="text-xs text-muted-foreground">
                 {wallets.filter(w => w.status === 'connected').length} active
               </p>
@@ -234,116 +251,128 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Recent Transactions</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{transactions.length}</div>
+              <div className="text-xl sm:text-2xl font-bold">{transactions.length}</div>
               <p className="text-xs text-muted-foreground">
                 This week
               </p>
             </CardContent>
           </Card>
-        </div>
+          </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
           {/* Wallets */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <CardTitle>Your Wallets</CardTitle>
+                  <CardTitle className="text-lg">Your Wallets</CardTitle>
                   <CardDescription>
                     Manage your connected payment methods
                   </CardDescription>
                 </div>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button size="sm" className="min-h-[44px] self-start sm:self-center">
+                  <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
                   Connect Wallet
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {wallets.map((wallet) => (
-                  <div
-                    key={wallet.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="text-2xl">
-                        {getWalletIcon(wallet.type)}
+              <nav aria-label="Connected wallets">
+                <ul className="space-y-3" role="list">
+                  {wallets.map((wallet) => (
+                    <li key={wallet.id}>
+                      <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          <div className="text-xl sm:text-2xl" role="img" aria-label={`${wallet.type} wallet`}>
+                            {getWalletIcon(wallet.type)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm sm:text-base truncate">{wallet.name}</p>
+                            <p className="text-xs sm:text-sm text-gray-500" aria-live="polite">
+                              {showBalances 
+                                ? formatCurrency(wallet.balance, wallet.currency)
+                                : '••••'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        <div className="ml-3">
+                          {getStatusBadge(wallet.status)}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{wallet.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {showBalances 
-                            ? formatCurrency(wallet.balance, wallet.currency)
-                            : '••••'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    {getStatusBadge(wallet.status)}
-                  </div>
-                ))}
-              </div>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             </CardContent>
           </Card>
 
           {/* Recent Transactions */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Transactions</CardTitle>
+              <CardTitle className="text-lg">Recent Transactions</CardTitle>
               <CardDescription>
                 Your latest wallet activity
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {transactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-full ${
-                        transaction.type === 'incoming' 
-                          ? 'bg-green-100 text-green-600' 
-                          : 'bg-red-100 text-red-600'
-                      }`}>
-                        {transaction.type === 'incoming' 
-                          ? <ArrowDownLeft className="h-4 w-4" />
-                          : <ArrowUpRight className="h-4 w-4" />
-                        }
+              <nav aria-label="Recent transactions">
+                <ul className="space-y-3" role="list">
+                  {transactions.map((transaction) => (
+                    <li key={transaction.id}>
+                      <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          <div 
+                            className={`p-2 rounded-full ${
+                              transaction.type === 'incoming' 
+                                ? 'bg-green-100 text-green-600' 
+                                : 'bg-red-100 text-red-600'
+                            }`}
+                            role="img"
+                            aria-label={transaction.type === 'incoming' ? 'Incoming transaction' : 'Outgoing transaction'}
+                          >
+                            {transaction.type === 'incoming' 
+                              ? <ArrowDownLeft className="h-4 w-4" aria-hidden="true" />
+                              : <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                            }
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm sm:text-base truncate">{transaction.description}</p>
+                            <p className="text-xs sm:text-sm text-gray-500">
+                              {new Date(transaction.timestamp).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`font-medium text-sm sm:text-base ml-3 ${
+                          transaction.type === 'incoming' 
+                            ? 'text-green-600' 
+                            : 'text-red-600'
+                        }`}>
+                          {transaction.type === 'incoming' ? '+' : '-'}
+                          {formatCurrency(transaction.amount, transaction.currency)}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{transaction.description}</p>
-                        <p className="text-sm text-gray-500">
-                          {new Date(transaction.timestamp).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`font-medium ${
-                      transaction.type === 'incoming' 
-                        ? 'text-green-600' 
-                        : 'text-red-600'
-                    }`}>
-                      {transaction.type === 'incoming' ? '+' : '-'}
-                      {formatCurrency(transaction.amount, transaction.currency)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
               
               {transactions.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
-                  No transactions yet
+                  <p>No transactions yet</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       </main>
+
+      {/* Mobile Navigation */}
+      <MobileNavigation />
     </div>
   );
 }

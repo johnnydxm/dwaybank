@@ -217,7 +217,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Grant appropriate permissions
 GRANT SELECT, INSERT, UPDATE ON users TO dwaybank;
-GRANT USAGE ON SEQUENCE users_id_seq TO dwaybank;
 
 -- Create comments for documentation
 COMMENT ON TABLE users IS 'Core users table with security, compliance, and audit features';

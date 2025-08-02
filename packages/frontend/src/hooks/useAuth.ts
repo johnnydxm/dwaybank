@@ -6,8 +6,9 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<AuthResponse>;
+  register: (data: RegisterRequest) => Promise<AuthResponse>;
+  verifyMFA: (code: string, userId: string, sessionId: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -42,15 +43,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
   }, []);
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginRequest): Promise<AuthResponse> => {
     setIsLoading(true);
     try {
       const response = await authAPI.login(credentials);
-      const { user: userData, access_token, refresh_token } = response.data;
+      const authData = response.data;
 
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-      setUser(userData);
+      // If MFA is required, return the response for the component to handle
+      if (authData.mfa_required) {
+        return authData;
+      }
+
+      // If tokens are provided, save them and set user
+      if (authData.tokens) {
+        localStorage.setItem('access_token', authData.tokens.access_token);
+        localStorage.setItem('refresh_token', authData.tokens.refresh_token);
+        setUser(authData.user);
+      }
+
+      return authData;
     } catch (error) {
       throw error;
     } finally {
@@ -58,15 +69,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (data: RegisterRequest) => {
+  const register = async (data: RegisterRequest): Promise<AuthResponse> => {
     setIsLoading(true);
     try {
       const response = await authAPI.register(data);
-      const { user: userData, access_token, refresh_token } = response.data;
+      const authData = response.data;
 
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-      setUser(userData);
+      // If email verification is required, return the response for the component to handle
+      if (authData.verification_required) {
+        return authData;
+      }
+
+      // If tokens are provided, save them and set user
+      if (authData.tokens) {
+        localStorage.setItem('access_token', authData.tokens.access_token);
+        localStorage.setItem('refresh_token', authData.tokens.refresh_token);
+        setUser(authData.user);
+      }
+
+      return authData;
     } catch (error) {
       throw error;
     } finally {
@@ -89,6 +110,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const verifyMFA = async (code: string, userId: string, sessionId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await authAPI.verifyMFA(code, userId, sessionId);
+      const authData = response.data;
+
+      if (authData.tokens) {
+        localStorage.setItem('access_token', authData.tokens.access_token);
+        localStorage.setItem('refresh_token', authData.tokens.refresh_token);
+        setUser(authData.user);
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshUser = async () => {
     try {
       const response = await authAPI.getProfile();
@@ -104,6 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAuthenticated,
     login,
     register,
+    verifyMFA,
     logout,
     refreshUser,
   };

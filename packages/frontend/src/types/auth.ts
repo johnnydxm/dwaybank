@@ -3,8 +3,9 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  is_verified: boolean;
-  mfa_enabled: boolean;
+  email_verified: boolean;
+  status: 'active' | 'inactive' | 'suspended' | 'closed';
+  mfa_enabled?: boolean;
   profile_picture?: string;
   phone_number?: string;
   created_at: string;
@@ -38,9 +39,14 @@ export interface MFAVerificationRequest {
 
 export interface AuthResponse {
   user: User;
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
+  tokens?: {
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+  };
+  mfa_required?: boolean;
+  mfa_methods?: string[];
+  verification_required?: boolean;
 }
 
 export interface PasswordChangeRequest {

@@ -63,7 +63,8 @@ CREATE INDEX idx_sessions_status ON user_sessions(status);
 CREATE INDEX idx_sessions_expires_at ON user_sessions(expires_at);
 CREATE INDEX idx_sessions_last_used ON user_sessions(last_used);
 CREATE INDEX idx_sessions_ip_address ON user_sessions(ip_address);
-CREATE INDEX idx_sessions_user_agent ON user_sessions USING gin(to_tsvector('english', user_agent));
+-- Full text search index for user agent (commented out for simplicity)
+-- CREATE INDEX idx_sessions_user_agent ON user_sessions USING gin(to_tsvector('english', user_agent));
 CREATE INDEX idx_sessions_device_fingerprint ON user_sessions(device_fingerprint) WHERE device_fingerprint IS NOT NULL;
 CREATE INDEX idx_sessions_created_at ON user_sessions(created_at);
 CREATE INDEX idx_sessions_revoked_at ON user_sessions(revoked_at) WHERE revoked_at IS NOT NULL;
@@ -79,7 +80,7 @@ CREATE INDEX idx_sessions_security ON user_sessions(user_id, ip_address, is_susp
 
 -- Partial index for active sessions
 CREATE INDEX idx_sessions_active_by_user ON user_sessions(user_id, last_used) 
-WHERE status = 'active' AND expires_at > CURRENT_TIMESTAMP;
+WHERE status = 'active';
 
 -- Create triggers
 CREATE TRIGGER update_sessions_updated_at
@@ -273,9 +274,9 @@ BEGIN
     AND status = 'active'
     AND expires_at > CURRENT_TIMESTAMP;
     
-    GET DIAGNOSTICS session_found = FOUND;
+    GET DIAGNOSTICS session_found = ROW_COUNT;
     
-    RETURN session_found;
+    RETURN session_found > 0;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

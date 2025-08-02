@@ -1,0 +1,333 @@
+# DwayBank Alerting Rules - Financial Services Grade
+# Critical alerts for banking application monitoring
+
+groups:
+  # ================================
+  # APPLICATION HEALTH ALERTS
+  # ================================
+  - name: dwaybank.application
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: (
+          sum(rate(http_requests_total{status=~"5.."}[5m])) /
+          sum(rate(http_requests_total[5m]))
+        ) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: backend
+          team: engineering
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% which is above the 5% threshold"
+          runbook_url: "https://wiki.dwaybank.com/runbooks/high-error-rate"
+
+      # High response time alert
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+          team: engineering
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s"
+          runbook_url: "https://wiki.dwaybank.com/runbooks/high-response-time"
+
+      # Application down alert
+      - alert: ApplicationDown
+        expr: up{job="dwaybank-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+          team: engineering
+        annotations:
+          summary: "DwayBank backend is down"
+          description: "Backend service has been down for more than 1 minute"
+          runbook_url: "https://wiki.dwaybank.com/runbooks/service-down"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          team: devops
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (
+          (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / 
+          node_memory_MemTotal_bytes
+        ) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: devops
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+  # ================================
+  # DATABASE ALERTS
+  # ================================
+  - name: dwaybank.database
+    rules:
+      # Database connection pool exhaustion
+      - alert: DatabaseConnectionPoolHigh
+        expr: pg_stat_database_numbackends / pg_settings_max_connections * 100 > 80
+        for: 3m
+        labels:
+          severity: warning
+          service: database
+          team: dba
+        annotations:
+          summary: "Database connection pool is running high"
+          description: "Connection pool usage is {{ $value }}%"
+
+      # Database down
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: database
+          team: dba
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Database has been unreachable for more than 1 minute"
+          runbook_url: "https://wiki.dwaybank.com/runbooks/database-down"
+
+      # Long running queries
+      - alert: LongRunningQueries
+        expr: pg_stat_activity_max_tx_duration{datname="dwaybank"} > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+          team: dba
+        annotations:
+          summary: "Long running database queries detected"
+          description: "Query has been running for {{ $value }} seconds"
+
+      # Database locks
+      - alert: DatabaseLocks
+        expr: pg_locks_count > 100
+        for: 2m
+        labels:
+          severity: warning
+          service: database
+          team: dba
+        annotations:
+          summary: "High number of database locks"
+          description: "{{ $value }} locks detected in database"
+
+  # ================================
+  # REDIS CACHE ALERTS
+  # ================================
+  - name: dwaybank.cache
+    rules:
+      # Redis down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: cache
+          team: devops
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis has been unreachable for more than 1 minute"
+
+      # High Redis memory usage
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: cache
+          team: devops
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is {{ $value }}%"
+
+      # High Redis command rate
+      - alert: RedisHighCommandRate
+        expr: rate(redis_commands_processed_total[5m]) > 10000
+        for: 10m
+        labels:
+          severity: warning
+          service: cache
+          team: devops
+        annotations:
+          summary: "Redis command rate is high"
+          description: "Redis is processing {{ $value }} commands per second"
+
+  # ================================
+  # SECURITY ALERTS
+  # ================================
+  - name: dwaybank.security
+    rules:
+      # High number of failed login attempts
+      - alert: HighFailedLogins
+        expr: increase(failed_login_attempts_total[5m]) > 50
+        for: 2m
+        labels:
+          severity: critical
+          service: security
+          team: security
+        annotations:
+          summary: "High number of failed login attempts"
+          description: "{{ $value }} failed login attempts in the last 5 minutes"
+          runbook_url: "https://wiki.dwaybank.com/runbooks/security-incident"
+
+      # Suspicious API activity
+      - alert: SuspiciousAPIActivity
+        expr: rate(http_requests_total{status="401"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: security
+          team: security
+        annotations:
+          summary: "High rate of unauthorized API requests"
+          description: "{{ $value }} unauthorized requests per second"
+
+      # SSL certificate expiry
+      - alert: SSLCertificateExpiry
+        expr: probe_ssl_earliest_cert_expiry - time() < 7 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+          service: security
+          team: devops
+        annotations:
+          summary: "SSL certificate expires soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+
+  # ================================
+  # BUSINESS METRICS ALERTS
+  # ================================
+  - name: dwaybank.business
+    rules:
+      # Transaction failure rate
+      - alert: HighTransactionFailureRate
+        expr: (
+          sum(rate(transaction_total{status="failed"}[5m])) /
+          sum(rate(transaction_total[5m]))
+        ) * 100 > 2
+        for: 3m
+        labels:
+          severity: critical
+          service: business
+          team: product
+        annotations:
+          summary: "High transaction failure rate"
+          description: "Transaction failure rate is {{ $value }}%"
+          runbook_url: "https://wiki.dwaybank.com/runbooks/transaction-failures"
+
+      # Low transaction volume
+      - alert: LowTransactionVolume
+        expr: sum(rate(transaction_total[5m])) < 1
+        for: 10m
+        labels:
+          severity: warning
+          service: business
+          team: product
+        annotations:
+          summary: "Low transaction volume"
+          description: "Transaction rate is {{ $value }} per second"
+
+      # Payment processing delays
+      - alert: PaymentProcessingDelay
+        expr: histogram_quantile(0.95, rate(payment_processing_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: business
+          team: product
+        annotations:
+          summary: "Payment processing delays detected"
+          description: "95th percentile payment processing time is {{ $value }}s"
+
+  # ================================
+  # INFRASTRUCTURE ALERTS
+  # ================================
+  - name: dwaybank.infrastructure
+    rules:
+      # Disk space running low
+      - alert: DiskSpaceLow
+        expr: (
+          (node_filesystem_size_bytes - node_filesystem_free_bytes) /
+          node_filesystem_size_bytes
+        ) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+          team: devops
+        annotations:
+          summary: "Disk space is running low"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Load balancer unhealthy targets
+      - alert: LoadBalancerUnhealthyTargets
+        expr: aws_alb_unhealthy_targets_sum > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: devops
+        annotations:
+          summary: "Load balancer has unhealthy targets"
+          description: "{{ $value }} targets are unhealthy"
+
+      # Network connectivity issues
+      - alert: NetworkConnectivityIssue
+        expr: probe_success == 0
+        for: 3m
+        labels:
+          severity: critical
+          service: infrastructure
+          team: devops
+        annotations:
+          summary: "Network connectivity issue detected"
+          description: "Cannot reach {{ $labels.instance }}"
+
+  # ================================
+  # COMPLIANCE ALERTS
+  # ================================
+  - name: dwaybank.compliance
+    rules:
+      # PCI DSS compliance check
+      - alert: PCIDSSComplianceViolation
+        expr: pci_compliance_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: compliance
+          team: security
+        annotations:
+          summary: "PCI DSS compliance violation detected"
+          description: "System is not compliant with PCI DSS requirements"
+          runbook_url: "https://wiki.dwaybank.com/runbooks/pci-compliance"
+
+      # Audit log failures
+      - alert: AuditLogFailure
+        expr: increase(audit_log_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: compliance
+          team: security
+        annotations:
+          summary: "Audit log failure detected"
+          description: "{{ $value }} audit log entries failed to write"

@@ -28,7 +28,7 @@ import {
 } from '../types/financial';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 const API_TIMEOUT = 10000; // 10 seconds
 
 // Create axios instance with default configuration
@@ -69,12 +69,22 @@ const createApiClient = (): AxiosInstance => {
               refresh_token: refreshToken,
             });
 
-            const { access_token } = response.data;
-            localStorage.setItem('access_token', access_token);
+            // Backend returns nested data structure
+            const tokensData = response.data.data?.tokens || response.data;
+            const accessToken = tokensData.access_token;
+            
+            if (accessToken) {
+              localStorage.setItem('access_token', accessToken);
+              
+              // Update refresh token if provided
+              if (tokensData.refresh_token) {
+                localStorage.setItem('refresh_token', tokensData.refresh_token);
+              }
 
-            // Retry original request with new token
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
-            return client(originalRequest);
+              // Retry original request with new token
+              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+              return client(originalRequest);
+            }
           }
         } catch (refreshError) {
           // Refresh failed, redirect to login
@@ -100,9 +110,20 @@ interface ApiResponse<T> {
   status: number;
 }
 
+// Backend API response structure
+interface BackendApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+  requestId: string;
+  error?: string;
+}
+
 // API Response handler
-const handleResponse = <T>(response: AxiosResponse<T>): ApiResponse<T> => ({
-  data: response.data,
+const handleResponse = <T>(response: AxiosResponse<BackendApiResponse<T>>): ApiResponse<T> => ({
+  data: response.data.data,
+  message: response.data.message,
   status: response.status,
 });
 
@@ -134,23 +155,35 @@ export const authAPI = {
   },
 
   changePassword: async (passwordData: PasswordChangeRequest): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.post('/auth/change-password', passwordData);
+    const response = await apiClient.put('/auth/change-password', passwordData);
     return handleResponse(response);
   },
 
   requestPasswordReset: async (data: PasswordResetRequest): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.post('/auth/reset-password', data);
+    const response = await apiClient.post('/auth/forgot-password', data);
     return handleResponse(response);
   },
 
   confirmPasswordReset: async (data: PasswordResetConfirmRequest): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.post('/auth/reset-password/confirm', data);
+    const response = await apiClient.post('/auth/reset-password', data);
     return handleResponse(response);
   },
 
   refreshToken: async (): Promise<ApiResponse<{ access_token: string }>> => {
     const refreshToken = localStorage.getItem('refresh_token');
     const response = await apiClient.post('/auth/refresh', { refresh_token: refreshToken });
+    return handleResponse(response);
+  },
+
+  verifyMFA: async (code: string, userId: string, sessionId: string): Promise<ApiResponse<AuthResponse>> => {
+    const response = await apiClient.post('/auth/verify-mfa', {
+      code,
+    }, {
+      headers: {
+        'x-user-id': userId,
+        'x-session-id': sessionId,
+      }
+    });
     return handleResponse(response);
   },
 };
@@ -366,12 +399,12 @@ export const securityAPI = {
   },
 
   getActiveSessions: async (): Promise<ApiResponse<SessionInfo[]>> => {
-    const response = await apiClient.get('/security/sessions');
+    const response = await apiClient.get('/auth/sessions');
     return handleResponse(response);
   },
 
   revokeSession: async (sessionId: string): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.delete(`/security/sessions/${sessionId}`);
+    const response = await apiClient.delete(`/auth/sessions/${sessionId}`);
     return handleResponse(response);
   },
 

@@ -113,7 +113,7 @@ const { error, value: envVars } = envSchema.validate(process.env, {
 
 if (error) {
   logger.error('Environment validation failed', { 
-    error: error.details.map(detail => detail.message) 
+    error: error.details.map((detail: any) => detail.message) 
   });
   throw new Error(`Environment validation error: ${error.message}`);
 }
