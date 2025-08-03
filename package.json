@@ -7,12 +7,14 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend-next\"",
     "dev:backend": "npm run dev --workspace=@dwaybank/backend",
     "dev:frontend": "npm run dev --workspace=@dwaybank/frontend",
+    "dev:frontend-next": "cd packages/frontend-nextjs && npm run dev",
     "build": "npm run build --workspaces",
     "build:backend": "npm run build --workspace=@dwaybank/backend",
     "build:frontend": "npm run build --workspace=@dwaybank/frontend",
+    "build:frontend-next": "cd packages/frontend-nextjs && npm run build",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "typecheck": "npm run typecheck --workspaces",

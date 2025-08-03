@@ -10,7 +10,7 @@ import {
   PasswordResetRequest,
   PasswordResetConfirmRequest,
   SessionInfo
-} from '../types/auth';
+} from '@/types/auth';
 import {
   Account,
   Transaction,
@@ -25,10 +25,10 @@ import {
   TransferRequest,
   BiometricAuthRequest,
   DeviceInfo
-} from '../types/financial';
+} from '@/types/financial';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3004/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3004/api/v1';
 const API_TIMEOUT = 10000; // 10 seconds
 
 // Create axios instance with default configuration
@@ -44,9 +44,11 @@ const createApiClient = (): AxiosInstance => {
   // Request interceptor to add auth token
   client.interceptors.request.use(
     (config) => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
       return config;
     },
@@ -63,34 +65,38 @@ const createApiClient = (): AxiosInstance => {
         originalRequest._retry = true;
 
         try {
-          const refreshToken = localStorage.getItem('refresh_token');
-          if (refreshToken) {
-            const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-              refresh_token: refreshToken,
-            });
+          if (typeof window !== 'undefined') {
+            const refreshToken = localStorage.getItem('refresh_token');
+            if (refreshToken) {
+              const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+                refresh_token: refreshToken,
+              });
 
-            // Backend returns nested data structure
-            const tokensData = response.data.data?.tokens || response.data;
-            const accessToken = tokensData.access_token;
-            
-            if (accessToken) {
-              localStorage.setItem('access_token', accessToken);
+              // Backend returns nested data structure
+              const tokensData = response.data.data?.tokens || response.data;
+              const accessToken = tokensData.access_token;
               
-              // Update refresh token if provided
-              if (tokensData.refresh_token) {
-                localStorage.setItem('refresh_token', tokensData.refresh_token);
-              }
+              if (accessToken) {
+                localStorage.setItem('access_token', accessToken);
+                
+                // Update refresh token if provided
+                if (tokensData.refresh_token) {
+                  localStorage.setItem('refresh_token', tokensData.refresh_token);
+                }
 
-              // Retry original request with new token
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-              return client(originalRequest);
+                // Retry original request with new token
+                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                return client(originalRequest);
+              }
             }
           }
         } catch (refreshError) {
           // Refresh failed, redirect to login
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
+          }
         }
       }
 
@@ -116,7 +122,7 @@ interface BackendApiResponse<T> {
   message: string;
   data: T;
   timestamp: string;
-  requestId?: string;
+  requestId: string;
   error?: string;
 }
 
@@ -170,7 +176,7 @@ export const authAPI = {
   },
 
   refreshToken: async (): Promise<ApiResponse<{ access_token: string }>> => {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
     const response = await apiClient.post('/auth/refresh', { refresh_token: refreshToken });
     return handleResponse(response);
   },
@@ -331,159 +337,6 @@ export const budgetAPI = {
 
   deleteGoal: async (goalId: string): Promise<ApiResponse<{ message: string }>> => {
     const response = await apiClient.delete(`/goals/${goalId}`);
-    return handleResponse(response);
-  },
-};
-
-// Payment Methods API
-export const paymentAPI = {
-  getPaymentMethods: async (): Promise<ApiResponse<PaymentMethod[]>> => {
-    const response = await apiClient.get('/payment-methods');
-    return handleResponse(response);
-  },
-
-  addPaymentMethod: async (methodData: Partial<PaymentMethod>): Promise<ApiResponse<PaymentMethod>> => {
-    const response = await apiClient.post('/payment-methods', methodData);
-    return handleResponse(response);
-  },
-
-  updatePaymentMethod: async (methodId: string, methodData: Partial<PaymentMethod>): Promise<ApiResponse<PaymentMethod>> => {
-    const response = await apiClient.put(`/payment-methods/${methodId}`, methodData);
-    return handleResponse(response);
-  },
-
-  removePaymentMethod: async (methodId: string): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.delete(`/payment-methods/${methodId}`);
-    return handleResponse(response);
-  },
-
-  setDefaultPaymentMethod: async (methodId: string): Promise<ApiResponse<PaymentMethod>> => {
-    const response = await apiClient.put(`/payment-methods/${methodId}/default`);
-    return handleResponse(response);
-  },
-};
-
-// Notifications API
-export const notificationAPI = {
-  getNotifications: async (params?: {
-    type?: string;
-    read?: boolean;
-    limit?: number;
-    offset?: number;
-  }): Promise<ApiResponse<Notification[]>> => {
-    const response = await apiClient.get('/notifications', { params });
-    return handleResponse(response);
-  },
-
-  markAsRead: async (notificationId: string): Promise<ApiResponse<Notification>> => {
-    const response = await apiClient.put(`/notifications/${notificationId}/read`);
-    return handleResponse(response);
-  },
-
-  markAllAsRead: async (): Promise<ApiResponse<{ count: number }>> => {
-    const response = await apiClient.put('/notifications/read-all');
-    return handleResponse(response);
-  },
-
-  deleteNotification: async (notificationId: string): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.delete(`/notifications/${notificationId}`);
-    return handleResponse(response);
-  },
-};
-
-// Security API
-export const securityAPI = {
-  getSecurityAlerts: async (): Promise<ApiResponse<SecurityAlert[]>> => {
-    const response = await apiClient.get('/security/alerts');
-    return handleResponse(response);
-  },
-
-  getActiveSessions: async (): Promise<ApiResponse<SessionInfo[]>> => {
-    const response = await apiClient.get('/auth/sessions');
-    return handleResponse(response);
-  },
-
-  revokeSession: async (sessionId: string): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.delete(`/auth/sessions/${sessionId}`);
-    return handleResponse(response);
-  },
-
-  getTrustedDevices: async (): Promise<ApiResponse<DeviceInfo[]>> => {
-    const response = await apiClient.get('/security/devices');
-    return handleResponse(response);
-  },
-
-  revokeTrustedDevice: async (deviceId: string): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.delete(`/security/devices/${deviceId}`);
-    return handleResponse(response);
-  },
-
-  initiateSecurityCheck: async (): Promise<ApiResponse<{ status: string }>> => {
-    const response = await apiClient.post('/security/check');
-    return handleResponse(response);
-  },
-};
-
-// Insights and Analytics API
-export const insightsAPI = {
-  getFinancialInsights: async (): Promise<ApiResponse<FinancialInsight[]>> => {
-    const response = await apiClient.get('/insights');
-    return handleResponse(response);
-  },
-
-  getSpendingAnalysis: async (timeframe: 'week' | 'month' | 'quarter' | 'year'): Promise<ApiResponse<MonthlySpending[]>> => {
-    const response = await apiClient.get(`/insights/spending/${timeframe}`);
-    return handleResponse(response);
-  },
-
-  getCashflowProjection: async (months: number): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get(`/insights/cashflow/${months}`);
-    return handleResponse(response);
-  },
-};
-
-// Biometric Authentication API
-export const biometricAPI = {
-  requestBiometricAuth: async (type: 'fingerprint' | 'face_id' | 'voice'): Promise<ApiResponse<BiometricAuthRequest>> => {
-    const response = await apiClient.post('/auth/biometric/request', { type });
-    return handleResponse(response);
-  },
-
-  verifyBiometric: async (challenge: string, response: string): Promise<ApiResponse<{ verified: boolean }>> => {
-    const apiResponse = await apiClient.post('/auth/biometric/verify', { challenge, response });
-    return handleResponse(apiResponse);
-  },
-
-  enableBiometric: async (type: 'fingerprint' | 'face_id' | 'voice'): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.post('/auth/biometric/enable', { type });
-    return handleResponse(response);
-  },
-
-  disableBiometric: async (type: 'fingerprint' | 'face_id' | 'voice'): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.post('/auth/biometric/disable', { type });
-    return handleResponse(response);
-  },
-};
-
-// Wallet Integration API (for external wallets like Apple Pay, Google Pay, etc.)
-export const walletAPI = {
-  getWallets: async (): Promise<ApiResponse<any[]>> => {
-    const response = await apiClient.get('/wallets');
-    return handleResponse(response);
-  },
-
-  connectWallet: async (walletType: string, credentials: any): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/wallets/connect', { type: walletType, credentials });
-    return handleResponse(response);
-  },
-
-  disconnectWallet: async (walletId: string): Promise<ApiResponse<{ message: string }>> => {
-    const response = await apiClient.delete(`/wallets/${walletId}`);
-    return handleResponse(response);
-  },
-
-  syncWallet: async (walletId: string): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post(`/wallets/${walletId}/sync`);
     return handleResponse(response);
   },
 };

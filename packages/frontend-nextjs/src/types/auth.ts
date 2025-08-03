@@ -4,14 +4,10 @@ export interface User {
   first_name: string;
   last_name: string;
   email_verified: boolean;
-  phone_verified?: boolean;
-  kyc_status?: string;
-  status: 'pending' | 'active' | 'suspended' | 'closed';
+  status: 'active' | 'inactive' | 'suspended' | 'closed';
   mfa_enabled?: boolean;
   profile_picture?: string;
   phone_number?: string;
-  timezone?: string;
-  locale?: string;
   created_at: string;
   last_login?: string;
 }

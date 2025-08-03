@@ -7,14 +7,7 @@ export default defineConfig({
   plugins: [
     react({
       // Enable React Fast Refresh
-      fastRefresh: true,
-      // Optimize bundle size
-      babel: {
-        plugins: [
-          // Remove PropTypes in production
-          ['babel-plugin-transform-remove-prop-types', { removeImport: true }]
-        ]
-      }
+      fastRefresh: true
     })
   ],
   resolve: {
@@ -26,7 +19,7 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:3004',
         changeOrigin: true,
       },
     },

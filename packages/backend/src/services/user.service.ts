@@ -143,6 +143,33 @@ export class UserService {
   }
 
   /**
+   * Get user by email (for authentication routes)
+   */
+  public async getUserByEmail(email: string): Promise<UserProfile | null> {
+    try {
+      const result = await pool.query(`
+        SELECT id, email, first_name, last_name, phone_number, 
+               status, email_verified, phone_verified, kyc_status,
+               profile_picture, timezone, locale, created_at, last_login
+        FROM users 
+        WHERE email = $1 AND deleted_at IS NULL
+      `, [email.toLowerCase()]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Failed to get user by email', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        email,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Get user by email for authentication
    */
   public async getUserForAuth(email: string): Promise<UserLookupResult> {
