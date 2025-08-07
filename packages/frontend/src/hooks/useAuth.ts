@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext, type ReactNode } from 'react';
+import React, { useState, useEffect, useContext, createContext, type ReactNode } from 'react';
 import { User, AuthResponse, LoginRequest, RegisterRequest } from '../types/auth';
 import { authAPI } from '../services/api';
 
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const value: AuthContextType = {
+  const value = {
     user,
     isLoading,
     isAuthenticated,
@@ -148,10 +148,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     refreshUser,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  return React.createElement(
+    AuthContext.Provider,
+    { value },
+    children
   );
 };
 

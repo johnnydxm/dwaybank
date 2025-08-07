@@ -21,18 +21,27 @@ import {
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
-import { Account, AccountBalance } from '../types/financial';
-import { accountAPI, walletAPI } from '../services/api';
+import { 
+  Account, 
+  AccountBalance, 
+  WalletDashboardData, 
+  WalletConnection, 
+  WalletPaymentMethod,
+  WalletType 
+} from '../types/financial';
+import { accountAPI } from '../services/api';
+import walletApi from '../services/walletApi';
 import { formatCurrency } from '../utils/currency';
 
 export default function WalletsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [balances, setBalances] = useState<Map<string, AccountBalance>>(new Map());
-  const [connectedWallets, setConnectedWallets] = useState<any[]>([]);
+  const [walletDashboard, setWalletDashboard] = useState<WalletDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBalances, setShowBalances] = useState(true);
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState<string | null>(null);
 
   const { isMobile, settings } = useAccessibility();
   const { announceNavigation } = useScreenReader();
@@ -45,7 +54,37 @@ export default function WalletsPage() {
   const loadWalletsData = async () => {
     setIsLoading(true);
     try {
-      // Mock data for demonstration
+      // Load both traditional accounts and wallet dashboard data
+      const [accountsData, walletData] = await Promise.all([
+        loadTraditionalAccounts(),
+        walletApi.getDashboard()
+      ]);
+
+      setWalletDashboard(walletData);
+
+      // Create balances map for traditional accounts
+      const balanceMap = new Map<string, AccountBalance>();
+      accountsData.forEach(account => {
+        balanceMap.set(account.id, {
+          current: account.balance,
+          available: account.available_balance,
+          pending: Math.random() * 100, // Would come from API in real implementation
+          currency: account.currency
+        });
+      });
+      setBalances(balanceMap);
+
+    } catch (err: any) {
+      console.error('Failed to load wallets data:', err);
+      setError('Failed to load wallet information. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTraditionalAccounts = async (): Promise<Account[]> => {
+    try {
+      // This would be replaced with actual account API call
       const mockAccounts: Account[] = [
         {
           id: '1',
@@ -79,45 +118,11 @@ export default function WalletsPage() {
         }
       ];
 
-      const mockWallets = [
-        {
-          id: '1',
-          name: 'Apple Pay',
-          type: 'apple_pay',
-          status: 'connected',
-          lastSync: '2 hours ago',
-          transactionCount: 42
-        },
-        {
-          id: '2',
-          name: 'Google Pay',
-          type: 'google_pay',
-          status: 'syncing',
-          lastSync: '1 day ago',
-          transactionCount: 18
-        }
-      ];
-
       setAccounts(mockAccounts);
-      setConnectedWallets(mockWallets);
-
-      // Create balances
-      const balanceMap = new Map<string, AccountBalance>();
-      mockAccounts.forEach(account => {
-        balanceMap.set(account.id, {
-          current: account.balance,
-          available: account.available_balance,
-          pending: Math.random() * 100,
-          currency: account.currency
-        });
-      });
-      setBalances(balanceMap);
-
-    } catch (err: any) {
-      console.error('Failed to load wallets data:', err);
-      setError('Failed to load wallet information. Please try again.');
-    } finally {
-      setIsLoading(false);
+      return mockAccounts;
+    } catch (error) {
+      console.error('Failed to load traditional accounts:', error);
+      return [];
     }
   };
 
@@ -141,48 +146,103 @@ export default function WalletsPage() {
     }
   };
 
-  const handleConnectWallet = () => {
-    console.log('Navigate to connect wallet');
+  const handleConnectWallet = async (walletType: WalletType) => {
+    try {
+      setError('');
+      
+      const connectRequest = {
+        wallet_type: walletType,
+        display_name: walletApi.getWalletDisplayName(walletType)
+      };
+
+      const result = await walletApi.connectWallet(connectRequest);
+      
+      if (result.status === 'pending_auth' && result.auth_url) {
+        // Handle OAuth flow - redirect user or show QR code
+        if (walletType === 'metamask') {
+          // For MetaMask, show QR code or deeplink
+          alert(`Scan this QR code with MetaMask: ${result.auth_url}`);
+        } else {
+          // For OAuth flows, redirect to authorization URL
+          window.open(result.auth_url, '_blank');
+        }
+      } else if (result.status === 'connected') {
+        // Wallet connected successfully, refresh dashboard
+        await loadWalletsData();
+      }
+    } catch (err: any) {
+      console.error('Failed to connect wallet:', err);
+      setError(`Failed to connect ${walletApi.getWalletDisplayName(walletType)}: ${err.message}`);
+    }
   };
 
-  const handleWalletAction = (walletId: string, action: string) => {
-    console.log(`${action} wallet:`, walletId);
+  const handleWalletAction = async (walletId: string, action: string) => {
+    try {
+      setError('');
+      
+      switch (action) {
+        case 'sync':
+          await handleSyncWallet(walletId);
+          break;
+        case 'disconnect':
+          await handleDisconnectWallet(walletId);
+          break;
+        case 'settings':
+          // Navigate to wallet settings (would be implemented)
+          console.log('Navigate to wallet settings:', walletId);
+          break;
+        default:
+          console.log(`Unknown wallet action: ${action}`);
+      }
+    } catch (err: any) {
+      console.error(`Failed to ${action} wallet:`, err);
+      setError(`Failed to ${action} wallet: ${err.message}`);
+    }
+  };
+
+  const handleSyncWallet = async (walletId: string) => {
+    try {
+      setIsSyncing(walletId);
+      await walletApi.syncWallet(walletId, true);
+      await loadWalletsData(); // Refresh dashboard after sync
+    } catch (err: any) {
+      console.error('Failed to sync wallet:', err);
+      throw err;
+    } finally {
+      setIsSyncing(null);
+    }
+  };
+
+  const handleDisconnectWallet = async (walletId: string) => {
+    if (!confirm('Are you sure you want to disconnect this wallet?')) {
+      return;
+    }
+
+    try {
+      await walletApi.disconnectWallet(walletId);
+      await loadWalletsData(); // Refresh dashboard after disconnect
+    } catch (err: any) {
+      console.error('Failed to disconnect wallet:', err);
+      throw err;
+    }
   };
 
   const getTotalBalance = () => {
-    return accounts
+    const traditionalBalance = accounts
       .filter(account => account.currency === 'USD')
       .reduce((total, account) => total + account.balance, 0);
+    
+    const walletBalance = walletDashboard?.total_balance_usd || 0;
+    
+    return traditionalBalance + walletBalance;
   };
 
-  const getWalletIcon = (type: string) => {
-    switch (type) {
-      case 'apple_pay':
-        return '🍎';
-      case 'google_pay':
-        return '🎨';
-      case 'samsung_pay':
-        return '📱';
-      case 'paypal':
-        return '💙';
-      case 'venmo':
-        return '💸';
-      default:
-        return '💳';
-    }
+  const getWalletIcon = (type: WalletType) => {
+    return walletApi.getWalletIcon(type);
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'connected':
-        return 'text-green-600 bg-green-50';
-      case 'syncing':
-        return 'text-yellow-600 bg-yellow-50';
-      case 'disconnected':
-        return 'text-red-600 bg-red-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
+    return walletApi.getStatusColorClass(status);
   };
 
   if (isLoading) {
@@ -218,7 +278,10 @@ export default function WalletsPage() {
               >
                 {showBalances ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-              <Button size="sm" onClick={handleConnectWallet}>
+              <Button size="sm" onClick={() => {
+                // For now, just connect Google Pay as default - would show dropdown in real implementation
+                handleConnectWallet('google_pay');
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Connect Wallet
               </Button>
@@ -246,13 +309,13 @@ export default function WalletsPage() {
                   {showBalances ? formatCurrency(getTotalBalance()) : '••••••'}
                 </p>
                 <p className="text-blue-100 text-sm mt-1">
-                  Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}
+                  Across {accounts.length + (walletDashboard?.connected_wallets.length || 0)} account{(accounts.length + (walletDashboard?.connected_wallets.length || 0)) !== 1 ? 's' : ''}
                 </p>
               </div>
               <div className="text-right">
                 <Wallet className="h-12 w-12 text-blue-200 mb-2" />
                 <Badge variant="secondary" className="bg-white/20 text-white">
-                  {connectedWallets.length} Connected
+                  {(walletDashboard?.connected_wallets.length || 0)} Connected
                 </Badge>
               </div>
             </div>
@@ -312,14 +375,17 @@ export default function WalletsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Connected Wallets</h2>
-              <Button variant="outline" size="sm" onClick={handleConnectWallet}>
+              <Button variant="outline" size="sm" onClick={() => {
+                // For now, just connect Google Pay as default - would show dropdown in real implementation
+                handleConnectWallet('google_pay');
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Connect Wallet
               </Button>
             </div>
 
             <div className="space-y-3">
-              {connectedWallets.map((wallet) => (
+              {walletDashboard?.connected_wallets.map((wallet) => (
                 <TouchOptimizedCard
                   key={wallet.id}
                   onTap={() => handleWalletAction(wallet.id, 'view')}
@@ -329,31 +395,43 @@ export default function WalletsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="text-2xl">
-                        {getWalletIcon(wallet.type)}
+                        {getWalletIcon(wallet.wallet_type)}
                       </div>
                       <div>
-                        <p className="font-medium">{wallet.name}</p>
+                        <p className="font-medium">{wallet.display_name}</p>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <span>Last sync: {wallet.lastSync || 'Never'}</span>
-                          {wallet.transactionCount && (
-                            <span>• {wallet.transactionCount} transactions</span>
-                          )}
+                          <span>Last sync: {wallet.last_sync ? new Date(wallet.last_sync).toLocaleString() : 'Never'}</span>
+                          <span>• {wallet.sync_count} syncs</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Badge className={getStatusColor(wallet.status)}>
                         {wallet.status === 'connected' && <CheckCircle className="h-3 w-3 mr-1" />}
-                        {wallet.status === 'syncing' && <Sync className="h-3 w-3 mr-1 animate-spin" />}
-                        {wallet.status}
+                        {(wallet.status === 'syncing' || isSyncing === wallet.id) && <Sync className="h-3 w-3 mr-1 animate-spin" />}
+                        {isSyncing === wallet.id ? 'syncing' : wallet.status}
                       </Badge>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleWalletAction(wallet.id, 'sync')}
+                        disabled={isSyncing === wallet.id}
+                        title="Sync wallet"
+                      >
+                        <Sync className={`h-4 w-4 ${isSyncing === wallet.id ? 'animate-spin' : ''}`} />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleWalletAction(wallet.id, 'settings')}
+                        title="Wallet settings"
+                      >
                         <Settings className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 </TouchOptimizedCard>
-              ))}
+              )) || []}
             </div>
 
             {/* Available Wallets to Connect */}
@@ -367,18 +445,22 @@ export default function WalletsPage() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { name: 'Apple Pay', type: 'apple_pay', icon: '🍎' },
-                    { name: 'Google Pay', type: 'google_pay', icon: '🎨' },
-                    { name: 'Samsung Pay', type: 'samsung_pay', icon: '📱' },
-                    { name: 'PayPal', type: 'paypal', icon: '💙' },
-                  ].map((wallet) => (
+                    { name: 'Apple Pay', type: 'apple_pay' as WalletType },
+                    { name: 'Google Pay', type: 'google_pay' as WalletType },
+                    { name: 'MetaMask', type: 'metamask' as WalletType },
+                    { name: 'Samsung Pay', type: 'samsung_pay' as WalletType },
+                  ].filter(wallet => 
+                    // Filter out already connected wallets
+                    !walletDashboard?.connected_wallets.some(conn => conn.wallet_type === wallet.type)
+                  ).map((wallet) => (
                     <Button
                       key={wallet.type}
                       variant="outline"
                       className="h-auto p-3 flex flex-col items-center space-y-2"
-                      onClick={() => console.log('Connect', wallet.type)}
+                      onClick={() => handleConnectWallet(wallet.type)}
+                      disabled={isLoading}
                     >
-                      <span className="text-2xl">{wallet.icon}</span>
+                      <span className="text-2xl">{getWalletIcon(wallet.type)}</span>
                       <span className="text-sm font-medium">{wallet.name}</span>
                     </Button>
                   ))}

@@ -5,10 +5,7 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      // Enable React Fast Refresh
-      fastRefresh: true
-    })
+    react()
   ],
   resolve: {
     alias: {
@@ -19,7 +16,7 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/api': {
-        target: 'http://localhost:3004',
+        target: 'http://localhost:3000',
         changeOrigin: true,
       },
     },
@@ -41,12 +38,6 @@ export default defineConfig({
     },
     // Enable minification
     minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true
-      }
-    },
     // Optimize chunk size
     chunkSizeWarningLimit: 1000,
     // Enable CSS code splitting

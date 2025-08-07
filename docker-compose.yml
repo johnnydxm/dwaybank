@@ -1,117 +1,154 @@
+# DwayBank Neo Banking Platform - Production Docker Stack
+# Financial-Grade Security & Compliance
+
 version: '3.8'
-
-services:
-  # DwayBank Backend API
-  dwaybank-api:
-    build:
-      context: .
-      target: development
-    container_name: dwaybank-api
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=dwaybank_dev
-      - DB_USER=dwaybank
-      - DB_PASSWORD=${DB_PASSWORD:-dwaybank_dev_password}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-dwaybank_dev_redis}
-      - JWT_SECRET=${JWT_SECRET:-development_jwt_secret_32_chars_min}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-development_refresh_secret_32_chars}
-    volumes:
-      - .:/app
-      - /app/node_modules
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - dwaybank-network
-    restart: unless-stopped
-
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: dwaybank-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=dwaybank_dev
-      - POSTGRES_USER=dwaybank
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-dwaybank_dev_password}
-      - POSTGRES_INITDB_ARGS="--auth-host=scram-sha-256 --auth-local=scram-sha-256"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
-    networks:
-      - dwaybank-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dwaybank -d dwaybank_dev"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Redis Cache & Session Store
-  redis:
-    image: redis:7-alpine
-    container_name: dwaybank-redis
-    ports:
-      - "6379:6379"
-    command: redis-server --requirepass ${REDIS_PASSWORD:-dwaybank_dev_redis} --appendonly yes
-    volumes:
-      - redis_data:/data
-    networks:
-      - dwaybank-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli --pass ${REDIS_PASSWORD:-dwaybank_dev_redis} ping | grep PONG"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-  # pgAdmin (Database Management)
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: dwaybank-pgadmin
-    ports:
-      - "8080:80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@dwaybank.dev
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin_dev_password}
-      - PGADMIN_CONFIG_SERVER_MODE=False
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      - postgres
-    networks:
-      - dwaybank-network
-    restart: unless-stopped
-
-  # Redis Commander (Redis Management)
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: dwaybank-redis-commander
-    ports:
-      - "8081:8081"
-    environment:
-      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-dwaybank_dev_redis}
-    depends_on:
-      - redis
-    networks:
-      - dwaybank-network
-    restart: unless-stopped
 
 networks:
   dwaybank-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
-  postgres_data:
+  postgres-data:
     driver: local
-  redis_data:
+  redis-data:
     driver: local
-  pgadmin_data:
+  backend-logs:
     driver: local
+
+services:
+  # PostgreSQL Database - Financial Data Store
+  postgres:
+    image: postgres:15.4-alpine
+    container_name: dwaybank-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dwaybank
+      POSTGRES_USER: dwaybank_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-DwayBank2024!PostgresP@ssw0rd}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - dwaybank-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dwaybank_user -d dwaybank"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    user: postgres
+
+  # Redis Cache - Session & Transaction Cache
+  redis:
+    image: redis:7.2.3-alpine
+    container_name: dwaybank-redis
+    restart: unless-stopped
+    command: >
+      redis-server 
+      --requirepass ${REDIS_PASSWORD:-DwayBank2024!RedisP@ssw0rd}
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - dwaybank-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    user: redis
+
+  # DwayBank Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile.simple
+    container_name: dwaybank-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      
+      # Database Configuration
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dwaybank
+      DB_USER: dwaybank_user
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-DwayBank2024!PostgresP@ssw0rd}
+      DB_SSL: "false"
+      
+      # Redis Configuration  
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-DwayBank2024!RedisP@ssw0rd}
+      
+      # JWT & Security
+      JWT_SECRET: ${JWT_SECRET:-DwayBank2024!JWT$ecretK3y!}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-DwayBank2024!RefreshK3y!}
+      BCRYPT_ROUNDS: 12
+      
+      # API Security
+      CORS_ORIGIN: "http://localhost:3001,http://localhost:3002"
+      RATE_LIMIT_WINDOW: 900000
+      RATE_LIMIT_MAX: 100
+      
+      # Logging
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      
+    ports:
+      - "3000:3000"
+    networks:
+      - dwaybank-network
+    volumes:
+      - backend-logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+
+  # Frontend Service (when ready)
+  # frontend:
+  #   build:
+  #     context: ./packages/frontend-nextjs
+  #     dockerfile: Dockerfile
+  #   container_name: dwaybank-frontend
+  #   ports:
+  #     - "3001:3000"
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: http://backend:3000
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - dwaybank-network

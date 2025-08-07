@@ -373,7 +373,7 @@ export const requireRecentMFA = (maxAgeMinutes: number = 5) => {
 };
 
 /**
- * Middleware to bypass MFA for trusted devices (future enhancement)
+ * Middleware to check if device is trusted and bypass MFA
  */
 export const checkTrustedDevice = async (
   req: MFARequest,
@@ -381,11 +381,51 @@ export const checkTrustedDevice = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // TODO: Implement trusted device logic
-    // For now, just pass through
+    if (!req.user?.id) {
+      return next();
+    }
+
+    const userId = req.user.id;
+    const context = getAuthContext(req);
+    const deviceFingerprint = context.deviceFingerprint;
+
+    // Skip trusted device check if no device fingerprint
+    if (!deviceFingerprint) {
+      logger.debug('No device fingerprint provided, skipping trusted device check', { userId });
+      return next();
+    }
+
+    // Check if device is marked as trusted for this user
+    const trustedDevice = await checkIfDeviceIsTrusted(userId, deviceFingerprint, context.ipAddress);
+    
+    if (trustedDevice.isTrusted) {
+      // Mark MFA as verified for trusted device (with shorter session)
+      if (req.session) {
+        req.session.mfaVerified = true;
+        req.session.mfaVerifiedAt = new Date().toISOString();
+        req.session.mfaMethod = 'trusted_device';
+        req.session.trustedDevice = true;
+        req.session.trustedDeviceId = trustedDevice.deviceId;
+      }
+
+      req.mfaVerified = true;
+
+      auditLogger.info('MFA bypassed for trusted device', {
+        userId,
+        deviceId: trustedDevice.deviceId,
+        deviceName: trustedDevice.deviceName,
+        lastUsed: trustedDevice.lastUsed,
+        ipAddress: context.ipAddress,
+      });
+
+      // Still log the trusted device usage for security monitoring
+      await logTrustedDeviceUsage(userId, trustedDevice.deviceId, context);
+    }
+
     next();
   } catch (error) {
-    logger.error('Trusted device check failed', { error });
+    logger.error('Trusted device check failed', { error, userId: req.user?.id });
+    // Continue without trusted device bypass on error
     next();
   }
 };
@@ -437,10 +477,37 @@ export const detectSuspiciousMFAActivity = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    // TODO: Implement suspicious activity detection
-    // - Multiple failed attempts from different IPs
-    // - Rapid successive attempts
-    // - Unusual device/location patterns
+    // Import security service dynamically to avoid circular dependency
+    const { securityService } = await import('../services/security.service');
+    
+    if (securityService) {
+      const context = getAuthContext(req);
+      const suspiciousActivity = await securityService.detectSuspiciousActivity(
+        req.user?.id,
+        context.ipAddress,
+        context
+      );
+
+      if (suspiciousActivity.suspicious) {
+        auditLogger.warn('Suspicious MFA activity detected', {
+          userId: req.user?.id,
+          riskScore: suspiciousActivity.riskScore,
+          factors: suspiciousActivity.factors,
+          recommendations: suspiciousActivity.recommendedActions,
+          ipAddress: context.ipAddress,
+        });
+
+        // For high-risk activities, block the request
+        if (suspiciousActivity.riskScore >= 60) {
+          return res.status(429).json({
+            error: 'Suspicious activity detected',
+            code: 'SUSPICIOUS_ACTIVITY_BLOCKED',
+            riskScore: suspiciousActivity.riskScore,
+            retryAfter: 300, // 5 minutes
+          });
+        }
+      }
+    }
     
     next();
   } catch (error) {
@@ -448,6 +515,278 @@ export const detectSuspiciousMFAActivity = async (
     next();
   }
 };
+
+/**
+ * Helper function to check if device is trusted
+ */
+async function checkIfDeviceIsTrusted(
+  userId: string, 
+  deviceFingerprint: string, 
+  ipAddress: string
+): Promise<{
+  isTrusted: boolean;
+  deviceId?: string;
+  deviceName?: string;
+  lastUsed?: Date;
+  trustLevel?: 'high' | 'medium' | 'low';
+}> {
+  try {
+    // Dynamic import to avoid circular dependency
+    const { Pool } = await import('pg');
+    const { config } = await import('../config/environment');
+    
+    // Create a pool for this specific query
+    const pool = new Pool(config.database);
+    
+    const result = await pool.query(`
+      SELECT 
+        id,
+        device_name,
+        last_used_at,
+        trust_level,
+        created_at,
+        expires_at
+      FROM trusted_devices 
+      WHERE user_id = $1 
+      AND device_fingerprint = $2 
+      AND is_active = true 
+      AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+      ORDER BY last_used_at DESC
+      LIMIT 1
+    `, [userId, deviceFingerprint]);
+
+    if (result.rows.length === 0) {
+      await pool.end();
+      return { isTrusted: false };
+    }
+
+    const device = result.rows[0];
+    
+    // Additional security checks
+    const securityChecks = await performTrustedDeviceSecurityChecks(
+      userId, 
+      device.id, 
+      ipAddress, 
+      pool
+    );
+
+    await pool.end();
+
+    if (!securityChecks.passed) {
+      logger.warn('Trusted device failed security checks', {
+        userId,
+        deviceId: device.id,
+        failedChecks: securityChecks.failedChecks,
+      });
+      return { isTrusted: false };
+    }
+
+    return {
+      isTrusted: true,
+      deviceId: device.id,
+      deviceName: device.device_name,
+      lastUsed: device.last_used_at,
+      trustLevel: device.trust_level,
+    };
+
+  } catch (error) {
+    logger.error('Failed to check trusted device', { error, userId, deviceFingerprint });
+    return { isTrusted: false };
+  }
+}
+
+/**
+ * Perform additional security checks for trusted devices
+ */
+async function performTrustedDeviceSecurityChecks(
+  userId: string,
+  deviceId: string,
+  currentIP: string,
+  pool: any
+): Promise<{ passed: boolean; failedChecks: string[] }> {
+  const failedChecks: string[] = [];
+
+  try {
+    // Check 1: Device hasn't been used from too many different IPs recently
+    const ipDiversityResult = await pool.query(`
+      SELECT COUNT(DISTINCT ip_address) as unique_ips
+      FROM trusted_device_usage 
+      WHERE device_id = $1 
+      AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'
+    `, [deviceId]);
+
+    const uniqueIPs = parseInt(ipDiversityResult.rows[0]?.unique_ips) || 0;
+    if (uniqueIPs > 5) {
+      failedChecks.push('too_many_ips');
+    }
+
+    // Check 2: No recent security incidents for this user
+    const securityIncidentResult = await pool.query(`
+      SELECT COUNT(*) as incident_count
+      FROM security_events 
+      WHERE user_id = $1 
+      AND (blocked = true OR risk_score >= 75)
+      AND created_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'
+    `, [userId]);
+
+    const incidentCount = parseInt(securityIncidentResult.rows[0]?.incident_count) || 0;
+    if (incidentCount > 0) {
+      failedChecks.push('recent_security_incidents');
+    }
+
+    // Check 3: Device usage frequency (shouldn't be dormant too long)
+    const lastUsageResult = await pool.query(`
+      SELECT MAX(created_at) as last_usage
+      FROM trusted_device_usage 
+      WHERE device_id = $1
+    `, [deviceId]);
+
+    const lastUsage = lastUsageResult.rows[0]?.last_usage;
+    if (lastUsage) {
+      const daysSinceLastUse = (Date.now() - new Date(lastUsage).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSinceLastUse > 30) {
+        failedChecks.push('device_dormant');
+      }
+    }
+
+    return {
+      passed: failedChecks.length === 0,
+      failedChecks,
+    };
+
+  } catch (error) {
+    logger.error('Trusted device security checks failed', { error, userId, deviceId });
+    return { passed: false, failedChecks: ['security_check_error'] };
+  }
+}
+
+/**
+ * Log trusted device usage for monitoring
+ */
+async function logTrustedDeviceUsage(
+  userId: string,
+  deviceId: string,
+  context: MFAContext
+): Promise<void> {
+  try {
+    // Dynamic import to avoid circular dependency
+    const { Pool } = await import('pg');
+    const { config } = await import('../config/environment');
+    
+    const pool = new Pool(config.database);
+    
+    // Log the usage
+    await pool.query(`
+      INSERT INTO trusted_device_usage 
+      (device_id, user_id, ip_address, user_agent, created_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+    `, [deviceId, userId, context.ipAddress, context.userAgent]);
+
+    // Update last used timestamp on trusted device
+    await pool.query(`
+      UPDATE trusted_devices 
+      SET last_used_at = CURRENT_TIMESTAMP,
+          usage_count = usage_count + 1
+      WHERE id = $1
+    `, [deviceId]);
+
+    await pool.end();
+
+  } catch (error) {
+    logger.error('Failed to log trusted device usage', { error, userId, deviceId });
+  }
+}
+
+/**
+ * Middleware to register a device as trusted after successful MFA verification
+ */
+export const registerTrustedDevice = async (
+  req: MFARequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    // Check if user wants to trust this device
+    const trustDevice = req.body.trustDevice === true;
+    const deviceName = req.body.deviceName || 'Unknown Device';
+    
+    if (!trustDevice || !req.user?.id || !req.mfaVerified) {
+      return next();
+    }
+
+    const context = getAuthContext(req);
+    const deviceFingerprint = context.deviceFingerprint;
+
+    if (!deviceFingerprint) {
+      logger.debug('Cannot register trusted device without fingerprint', { userId: req.user.id });
+      return next();
+    }
+
+    // Register the device as trusted
+    await registerDeviceAsTrusted(req.user.id, deviceFingerprint, deviceName, context);
+
+    auditLogger.info('Device registered as trusted', {
+      userId: req.user.id,
+      deviceName,
+      ipAddress: context.ipAddress,
+    });
+
+    next();
+  } catch (error) {
+    logger.error('Failed to register trusted device', { error, userId: req.user?.id });
+    next();
+  }
+};
+
+/**
+ * Helper function to register a device as trusted
+ */
+async function registerDeviceAsTrusted(
+  userId: string,
+  deviceFingerprint: string,
+  deviceName: string,
+  context: MFAContext
+): Promise<void> {
+  try {
+    const { Pool } = await import('pg');
+    const { config } = await import('../config/environment');
+    
+    const pool = new Pool(config.database);
+    
+    // Check if device is already trusted
+    const existingDevice = await pool.query(`
+      SELECT id FROM trusted_devices
+      WHERE user_id = $1 AND device_fingerprint = $2 AND is_active = true
+    `, [userId, deviceFingerprint]);
+
+    if (existingDevice.rows.length > 0) {
+      await pool.end();
+      return; // Device already trusted
+    }
+
+    // Insert new trusted device
+    await pool.query(`
+      INSERT INTO trusted_devices 
+      (user_id, device_fingerprint, device_name, ip_address, user_agent, 
+       trust_level, expires_at, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+    `, [
+      userId,
+      deviceFingerprint,
+      deviceName,
+      context.ipAddress,
+      context.userAgent,
+      'medium', // Default trust level
+      new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days expiry
+    ]);
+
+    await pool.end();
+
+  } catch (error) {
+    logger.error('Failed to register trusted device in database', { error, userId });
+    throw error;
+  }
+}
 
 // Export all middleware functions
 export default {
@@ -457,6 +796,7 @@ export default {
   conditionalMFA,
   requireRecentMFA,
   checkTrustedDevice,
+  registerTrustedDevice,
   logMFAEvent,
   clearMFASession,
   detectSuspiciousMFAActivity,

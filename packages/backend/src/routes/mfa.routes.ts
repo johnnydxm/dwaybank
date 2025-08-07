@@ -53,6 +53,44 @@ const getAuthContext = (req: Request) => ({
   deviceFingerprint: req.headers['x-device-fingerprint'] as string,
 });
 
+// Middleware to verify admin role
+const requireAdminRole = (allowedRoles: string[] = ['admin', 'super_admin', 'auditor']) => {
+  return async (req: Request, res: Response, next: any) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: 'Authentication required',
+          code: 'UNAUTHORIZED',
+        });
+      }
+
+      if (!req.user.role || !allowedRoles.includes(req.user.role)) {
+        auditLogger.warn('Unauthorized admin access attempt', {
+          userId: req.user.id,
+          userRole: req.user.role,
+          ipAddress: getAuthContext(req).ipAddress,
+          endpoint: req.path,
+          requiredRoles: allowedRoles,
+        });
+
+        return res.status(403).json({
+          error: 'Administrative access required',
+          code: 'INSUFFICIENT_PERMISSIONS',
+          requiredRoles: allowedRoles,
+        });
+      }
+
+      next();
+    } catch (error) {
+      logger.error('Admin role verification failed', { error, userId: req.user?.id });
+      res.status(500).json({
+        error: 'Role verification failed',
+        code: 'INTERNAL_ERROR',
+      });
+    }
+  };
+};
+
 // Middleware to verify user authentication
 const requireAuth = async (req: Request, res: Response, next: any) => {
   try {
@@ -600,15 +638,9 @@ router.post('/backup-codes/regenerate',
  */
 router.get('/stats',
   requireAuth,
+  requireAdminRole(['admin', 'super_admin', 'auditor']),
   async (req: Request, res: Response) => {
     try {
-      // TODO: Add admin role check
-      // if (req.user.role !== 'admin') {
-      //   return res.status(403).json({
-      //     error: 'Admin access required',
-      //     code: 'FORBIDDEN',
-      //   });
-      // }
 
       const stats = await mfaService.getMFAStats();
 

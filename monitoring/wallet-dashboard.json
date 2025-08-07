@@ -1,0 +1,427 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "DwayBank Smart Wallet MVP Dashboard",
+    "tags": ["dwaybank", "wallet", "mvp"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Wallet Connections Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(wallets_total)",
+            "legendFormat": "Total Wallets",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(wallets_active_total)",
+            "legendFormat": "Active Wallets",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(wallet_connections_total[1h]))",
+            "legendFormat": "New Connections/Hour",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "displayMode": "list",
+              "orientation": "horizontal"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Wallet Types Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (wallet_type) (wallets_total)",
+            "legendFormat": "{{wallet_type}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Transaction Volume",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(wallet_transactions_total[5m]))",
+            "legendFormat": "Transactions/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(wallet_transactions_amount_total[5m]))",
+            "legendFormat": "Transaction Volume $/sec",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "never",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Wallet Sync Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(wallet_sync_success_total[5m]))",
+            "legendFormat": "Successful Syncs/min",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(wallet_sync_failed_total[5m]))",
+            "legendFormat": "Failed Syncs/min",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(wallet_sync_duration_seconds_bucket[5m])) by (le))",
+            "legendFormat": "95th Percentile Sync Time",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.1
+                },
+                {
+                  "color": "red",
+                  "value": 0.2
+                }
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 5,
+        "title": "Payment Processing",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(payment_attempts_total[5m]))",
+            "legendFormat": "Payment Attempts/min",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(payment_attempts_success_total[5m]))",
+            "legendFormat": "Successful Payments/min",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(payment_attempts_failed_total[5m])) / sum(rate(payment_attempts_total[5m]))",
+            "legendFormat": "Failure Rate",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.02
+                },
+                {
+                  "color": "red",
+                  "value": 0.05
+                }
+              ]
+            },
+            "unit": "percentunit"
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "API Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{path=~\"/api/wallets.*\"}[5m])) by (le))",
+            "legendFormat": "50th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{path=~\"/api/wallets.*\"}[5m])) by (le))",
+            "legendFormat": "95th percentile",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{path=~\"/api/wallets.*\"}[5m])) by (le))",
+            "legendFormat": "99th percentile",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "Response Time (s)",
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "pointSize": 5,
+              "showPoints": "never"
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 22
+        }
+      },
+      {
+        "id": 7,
+        "title": "Error Rate by Endpoint",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{path=~\"/api/wallets.*\",code=~\"5..\"}[5m])) by (path) / sum(rate(http_requests_total{path=~\"/api/wallets.*\"}[5m])) by (path)",
+            "legendFormat": "{{path}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisLabel": "Error Rate",
+              "drawStyle": "line",
+              "lineWidth": 2
+            },
+            "unit": "percentunit"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 22
+        }
+      },
+      {
+        "id": 8,
+        "title": "Security Metrics",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(auth_failures_total[5m]))",
+            "legendFormat": "Auth Failures/min",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(fraud_attempts_total[5m]))",
+            "legendFormat": "Fraud Attempts/min",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(security_alerts_total[5m]))",
+            "legendFormat": "Security Alerts/min",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.1
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 30
+        }
+      },
+      {
+        "id": 9,
+        "title": "Database Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(postgres_queries_total{table=~\"wallets|wallet_transactions|payment_methods\"}[5m])) by (table)",
+            "legendFormat": "{{table}} queries/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "avg(postgres_query_duration_seconds{table=~\"wallets|wallet_transactions|payment_methods\"}) by (table)",
+            "legendFormat": "{{table}} avg duration",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 30
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "gnetId": null,
+    "graphTooltip": 0,
+    "links": [],
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "weekStart": ""
+  }
+}

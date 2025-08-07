@@ -24,11 +24,21 @@ import {
   MonthlySpending,
   TransferRequest,
   BiometricAuthRequest,
-  DeviceInfo
+  DeviceInfo,
+  WalletConnection,
+  WalletDashboardData,
+  WalletTransaction,
+  WalletBalance,
+  WalletPaymentMethod,
+  WalletSyncStatus,
+  ConnectWalletRequest,
+  ConnectWalletResponse,
+  SyncWalletRequest,
+  SyncWalletResponse
 } from '@/types/financial';
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3004/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1';
 const API_TIMEOUT = 10000; // 10 seconds
 
 // Create axios instance with default configuration
@@ -338,6 +348,126 @@ export const budgetAPI = {
   deleteGoal: async (goalId: string): Promise<ApiResponse<{ message: string }>> => {
     const response = await apiClient.delete(`/goals/${goalId}`);
     return handleResponse(response);
+  },
+};
+
+// Wallet Integration API
+export const walletAPI = {
+  // Get wallet dashboard data
+  getDashboard: async (): Promise<ApiResponse<WalletDashboardData>> => {
+    const response = await apiClient.get('/wallets/dashboard');
+    return handleResponse(response);
+  },
+
+  // Get all wallet connections
+  getConnections: async (): Promise<ApiResponse<WalletConnection[]>> => {
+    const response = await apiClient.get('/wallets/connections');
+    return handleResponse(response);
+  },
+
+  // Connect a new wallet
+  connectWallet: async (request: ConnectWalletRequest): Promise<ApiResponse<ConnectWalletResponse>> => {
+    const response = await apiClient.post('/wallets/connect', request);
+    return handleResponse(response);
+  },
+
+  // Disconnect a wallet
+  disconnectWallet: async (connectionId: string): Promise<ApiResponse<{ message: string }>> => {
+    const response = await apiClient.delete(`/wallets/${connectionId}`);
+    return handleResponse(response);
+  },
+
+  // Sync wallet data
+  syncWallet: async (connectionId: string, request?: SyncWalletRequest): Promise<ApiResponse<SyncWalletResponse>> => {
+    const response = await apiClient.post(`/wallets/${connectionId}/sync`, request || {});
+    return handleResponse(response);
+  },
+
+  // Get wallet sync status
+  getSyncStatus: async (): Promise<ApiResponse<WalletSyncStatus[]>> => {
+    const response = await apiClient.get('/wallets/sync/status');
+    return handleResponse(response);
+  },
+
+  // Get payment methods for a wallet
+  getPaymentMethods: async (connectionId: string): Promise<ApiResponse<WalletPaymentMethod[]>> => {
+    const response = await apiClient.get(`/wallets/${connectionId}/payment-methods`);
+    return handleResponse(response);
+  },
+
+  // Get transactions for a wallet
+  getTransactions: async (
+    connectionId: string, 
+    params?: {
+      limit?: number;
+      offset?: number;
+      since?: string;
+    }
+  ): Promise<ApiResponse<{
+    transactions: WalletTransaction[];
+    pagination: {
+      limit: number;
+      offset: number;
+      total: number;
+    };
+  }>> => {
+    const response = await apiClient.get(`/wallets/${connectionId}/transactions`, { params });
+    return handleResponse(response);
+  },
+
+  // Get balances for a wallet
+  getBalances: async (connectionId: string): Promise<ApiResponse<WalletBalance[]>> => {
+    const response = await apiClient.get(`/wallets/${connectionId}/balances`);
+    return handleResponse(response);
+  },
+
+  // Update wallet settings
+  updateSettings: async (
+    connectionId: string, 
+    settings: {
+      display_name?: string;
+      auto_sync_enabled?: boolean;
+      sync_frequency?: number;
+    }
+  ): Promise<ApiResponse<Partial<WalletConnection>>> => {
+    const response = await apiClient.put(`/wallets/${connectionId}/settings`, settings);
+    return handleResponse(response);
+  },
+
+  // Get all transactions across all wallets
+  getAllTransactions: async (params?: {
+    limit?: number;
+    offset?: number;
+    since?: string;
+  }): Promise<ApiResponse<WalletTransaction[]>> => {
+    const connections = await walletAPI.getConnections();
+    const allTransactions: WalletTransaction[] = [];
+    
+    // Fetch transactions from all connected wallets
+    for (const connection of connections.data) {
+      try {
+        const transactionResponse = await walletAPI.getTransactions(connection.id, params);
+        allTransactions.push(...transactionResponse.data.transactions);
+      } catch (error) {
+        console.warn(`Failed to fetch transactions for wallet ${connection.id}:`, error);
+      }
+    }
+
+    // Sort by transaction date (most recent first)
+    allTransactions.sort((a, b) => 
+      new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+    );
+
+    // Apply limit if specified
+    const limitedTransactions = params?.limit 
+      ? allTransactions.slice(params.offset || 0, (params.offset || 0) + params.limit)
+      : allTransactions;
+
+    return {
+      data: limitedTransactions,
+      message: 'Transactions retrieved successfully',
+      status: 200
+    };
   },
 };
 

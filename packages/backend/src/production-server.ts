@@ -12,6 +12,12 @@ import logger from './config/logger';
 // Import routes
 import authRoutes from './routes/auth.routes';
 import accountRoutes from './routes/account.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import walletsRoutes from './routes/wallets.routes';
+import transactionsRoutes from './routes/transactions.routes';
+import budgetsRoutes from './routes/budgets.routes';
+import goalsRoutes from './routes/goals.routes';
+import insightsRoutes from './routes/insights.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -103,12 +109,55 @@ app.get('/api', (req, res) => {
       create: 'POST /api/v1/accounts',
       details: 'GET /api/v1/accounts/:id',
     },
+    dashboard: {
+      overview: 'GET /api/v1/dashboard',
+      wallets: 'GET /api/v1/dashboard/wallets', 
+      transactions: 'GET /api/v1/dashboard/transactions',
+      budgets: 'GET /api/v1/dashboard/budgets',
+      goals: 'GET /api/v1/dashboard/goals',
+      insights: 'GET /api/v1/dashboard/insights',
+      wallets_main: 'GET /api/v1/dashboard/wallets-main',
+    },
+    wallets: {
+      list: 'GET /api/v1/wallets',
+      dashboard: 'GET /api/v1/wallets/dashboard',
+    },
+    transactions: {
+      list: 'GET /api/v1/transactions',
+      categories: 'GET /api/v1/transactions/categories',
+      transfer: 'POST /api/v1/transactions/transfer',
+    },
+    budgets: {
+      list: 'GET /api/v1/budgets',
+      create: 'POST /api/v1/budgets',
+      update: 'PUT /api/v1/budgets/:id',
+      delete: 'DELETE /api/v1/budgets/:id',
+    },
+    goals: {
+      list: 'GET /api/v1/goals',
+      create: 'POST /api/v1/goals',
+      update: 'PUT /api/v1/goals/:id',
+      delete: 'DELETE /api/v1/goals/:id',
+      contribute: 'POST /api/v1/goals/:id/contribute',
+    },
+    insights: {
+      list: 'GET /api/v1/insights',
+      categories: 'GET /api/v1/insights/categories',
+      read: 'POST /api/v1/insights/:id/read',
+      dismiss: 'DELETE /api/v1/insights/:id',
+    },
   });
 });
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/accounts', accountRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/wallets', walletsRoutes);
+app.use('/api/v1/transactions', transactionsRoutes);
+app.use('/api/v1/budgets', budgetsRoutes);
+app.use('/api/v1/goals', goalsRoutes);
+app.use('/api/v1/insights', insightsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -146,6 +195,12 @@ async function startServer() {
       console.log(`📋 API info: http://localhost:${PORT}/api`);
       console.log(`🔐 Authentication: http://localhost:${PORT}/api/v1/auth`);
       console.log(`🏦 Accounts: http://localhost:${PORT}/api/v1/accounts`);
+      console.log(`📱 Dashboard: http://localhost:${PORT}/api/v1/dashboard`);
+      console.log(`💰 Wallets: http://localhost:${PORT}/api/v1/wallets`);
+      console.log(`💳 Transactions: http://localhost:${PORT}/api/v1/transactions`);
+      console.log(`📊 Budgets: http://localhost:${PORT}/api/v1/budgets`);
+      console.log(`🎯 Goals: http://localhost:${PORT}/api/v1/goals`);
+      console.log(`💡 Insights: http://localhost:${PORT}/api/v1/insights`);
       console.log(`🔗 CORS enabled for frontend applications`);
     });
 

@@ -16,6 +16,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import LoadingSpinner from '../components/ui/loading-spinner';
+import MobileNavigation from '../components/mobile/MobileNavigation';
 
 interface WalletBalance {
   id: string;

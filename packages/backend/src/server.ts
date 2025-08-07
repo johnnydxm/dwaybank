@@ -447,35 +447,59 @@ class DwayBankServer {
 // Create and start server
 const server = new DwayBankServer();
 
-// Graceful shutdown handlers
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, initiating graceful shutdown');
-  await server.shutdown();
-  process.exit(0);
-});
+// Prevent memory leaks from event listeners
+process.setMaxListeners(20);
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, initiating graceful shutdown');
-  await server.shutdown();
-  process.exit(0);
-});
+// Global shutdown handler to prevent duplicate listeners
+let shutdownInProgress = false;
+
+const gracefulShutdown = async (signal: string) => {
+  if (shutdownInProgress) {
+    logger.warn(`Shutdown already in progress, ignoring ${signal}`);
+    return;
+  }
+  
+  shutdownInProgress = true;
+  logger.info(`${signal} received, initiating graceful shutdown`);
+  
+  try {
+    await server.shutdown();
+    logger.info('Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    process.exit(1);
+  }
+};
+
+// Graceful shutdown handlers (only register once)
+process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.once('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Unhandled rejection handler
-process.on('unhandledRejection', (reason, promise) => {
+process.once('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection', { 
     reason: reason instanceof Error ? reason.message : reason,
     promise: promise.toString(),
   });
-  process.exit(1);
+  
+  if (!shutdownInProgress) {
+    gracefulShutdown('unhandledRejection');
+  }
 });
 
 // Uncaught exception handler
-process.on('uncaughtException', (error) => {
+process.once('uncaughtException', (error) => {
   logger.error('Uncaught Exception', { 
     error: error.message,
     stack: error.stack,
   });
-  process.exit(1);
+  
+  if (!shutdownInProgress) {
+    process.exit(1);
+  }
 });
 
 export default server;

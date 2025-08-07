@@ -6,11 +6,11 @@
   "main": "dist/index.js",
   "type": "commonjs",
   "scripts": {
-    "dev": "nodemon --env-file .env.development src/production-server.ts",
+    "dev": "nodemon",
     "dev-mock": "nodemon src/quick-server.ts",
-    "dev-minimal": "nodemon src/minimal-server.ts",
+    "dev-minimal": "ts-node --files src/minimal-server.ts",
     "build": "tsc",
-    "start": "node dist/production-server.js",
+    "start": "node src/simple-production-server.js",
     "start:mock": "node dist/quick-server.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -26,6 +26,9 @@
   },
   "dependencies": {
     "@types/joi": "^17.2.2",
+    "@types/passport": "^1.0.17",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/passport-local": "^1.0.38",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "connect-redis": "^7.1.0",
@@ -41,6 +44,9 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "passport-local": "^1.0.0",
     "pg": "^8.11.3",
     "pg-pool": "^3.6.1",
     "qrcode": "^1.5.3",
@@ -77,6 +83,7 @@
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
+    "twilio": "^5.8.0",
     "typescript": "^5.3.3"
   },
   "engines": {

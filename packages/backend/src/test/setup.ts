@@ -35,6 +35,8 @@ jest.mock('redis', () => ({
     del: jest.fn(),
     exists: jest.fn(),
     expire: jest.fn(),
+    on: jest.fn(), // Add event listener mock
+    off: jest.fn(), // Add event listener removal mock
     isReady: true,
   })),
 }));
@@ -48,6 +50,8 @@ jest.mock('pg', () => ({
     }),
     query: jest.fn(),
     end: jest.fn().mockResolvedValue(undefined),
+    on: jest.fn(), // Add event listener mock
+    off: jest.fn(), // Add event listener removal mock
   })),
 }));
 
