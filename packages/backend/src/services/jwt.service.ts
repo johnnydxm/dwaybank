@@ -33,11 +33,20 @@ export class JWTService {
   private readonly refreshTokenExpiry: string;
 
   constructor() {
+    // Handle missing configuration gracefully for tests
+    if (!config?.jwt?.secret) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
+    
+    if (!config?.jwt?.refreshSecret) {
+      throw new Error('JWT_REFRESH_SECRET environment variable is required');
+    }
+
     this.accessTokenSecret = config.jwt.secret;
     this.refreshTokenSecret = config.jwt.refreshSecret;
-    this.algorithm = config.jwt.algorithm as jwt.Algorithm;
-    this.accessTokenExpiry = config.jwt.expiresIn;
-    this.refreshTokenExpiry = config.jwt.refreshExpiresIn;
+    this.algorithm = (config.jwt.algorithm as jwt.Algorithm) || 'HS384';
+    this.accessTokenExpiry = config.jwt.expiresIn || '15m';
+    this.refreshTokenExpiry = config.jwt.refreshExpiresIn || '7d';
 
     // Validate JWT configuration on startup
     this.validateConfiguration();
@@ -47,11 +56,11 @@ export class JWTService {
    * Validate JWT service configuration
    */
   private validateConfiguration(): void {
-    if (this.accessTokenSecret.length < 32) {
+    if (!this.accessTokenSecret || this.accessTokenSecret.length < 32) {
       throw new Error('JWT access token secret must be at least 32 characters');
     }
 
-    if (this.refreshTokenSecret.length < 32) {
+    if (!this.refreshTokenSecret || this.refreshTokenSecret.length < 32) {
       throw new Error('JWT refresh token secret must be at least 32 characters');
     }
 

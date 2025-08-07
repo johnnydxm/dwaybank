@@ -1,13 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
+import securityHardening from './middleware/security-hardening.middleware';
 import { config, validateCriticalConfig } from './config/environment';
 import { initializeDatabases, closeDatabases, checkDatabaseHealth } from './config/database';
 import { initializeMFAService, setMFAService } from './services/mfa.service';
 import { initializeSecurityService, setSecurityService } from './services/security.service';
 import { initializeKYCService, setKYCService } from './services/kyc.service';
+import { initializeUserProfileService, setUserProfileService } from './services/user-profile.service';
 import logger, { auditLogger, httpLogger, performanceLogger } from './config/logger';
 import { createServer } from 'http';
 import { performance } from 'perf_hooks';
@@ -17,6 +17,7 @@ import mfaRoutes from './routes/mfa.routes';
 import authRoutes from './routes/auth.routes';
 import oauthRoutes from './routes/oauth.routes';
 import kycRoutes from './routes/kyc.routes';
+import userProfileRoutes from './routes/user-profile.routes';
 import accountRoutes from './routes/account.routes';
 import transactionRoutes from './routes/transaction.routes';
 
@@ -59,6 +60,10 @@ class DwayBankServer {
       const kycServiceInstance = await initializeKYCService(postgres);
       setKYCService(kycServiceInstance);
       
+      // Initialize User Profile service
+      const userProfileServiceInstance = await initializeUserProfileService(postgres);
+      setUserProfileService(userProfileServiceInstance);
+      
       // Configure middleware
       this.configureMiddleware();
       
@@ -83,39 +88,24 @@ class DwayBankServer {
    * Configure Express middleware
    */
   private configureMiddleware(): void {
-    // Security middleware
-    this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
-        },
-      },
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      },
-    }));
+    // Request ID middleware (must be first)
+    this.app.use(securityHardening.requestIdMiddleware);
 
-    // CORS configuration
-    this.app.use(cors({
-      origin: config.security.corsOrigin,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: [
-        'Origin',
-        'X-Requested-With',
-        'Content-Type',
-        'Authorization',
-        'Accept',
-        'X-API-Version',
-        'X-Request-ID',
-      ],
-      exposedHeaders: ['X-Request-ID', 'X-Rate-Limit-Remaining'],
-    }));
+    // Advanced security headers
+    this.app.use(securityHardening.advancedHelmet);
+    this.app.use(securityHardening.securityHeadersMiddleware);
+
+    // Request timeout middleware
+    this.app.use(securityHardening.requestTimeoutMiddleware(30000)); // 30 seconds
+
+    // Suspicious activity detection
+    this.app.use(securityHardening.suspiciousActivityDetection);
+
+    // CORS configuration with enhanced security
+    this.app.use(cors(securityHardening.corsOptions));
+
+    // Input sanitization middleware
+    this.app.use(securityHardening.inputSanitizationMiddleware);
 
     // Compression middleware
     this.app.use(compression({
@@ -129,40 +119,12 @@ class DwayBankServer {
       threshold: 1024,
     }));
 
-    // Body parsing middleware
-    this.app.use(express.json({ 
-      limit: '10mb',
-      strict: true,
-    }));
-    this.app.use(express.urlencoded({ 
-      extended: true, 
-      limit: '10mb',
-    }));
+    // Enhanced body parsing with security validation
+    this.app.use(express.json(securityHardening.jsonParserOptions));
+    this.app.use(express.urlencoded(securityHardening.urlEncodedOptions));
 
-    // Rate limiting
-    const limiter = rateLimit({
-      windowMs: config.security.rateLimit.windowMs,
-      max: config.security.rateLimit.maxRequests,
-      skipSuccessfulRequests: config.security.rateLimit.skipSuccessful,
-      standardHeaders: true,
-      legacyHeaders: false,
-      handler: (req, res) => {
-        auditLogger.warn('Rate limit exceeded', {
-          ip: req.ip,
-          userAgent: req.get('User-Agent'),
-          path: req.path,
-          method: req.method,
-        });
-        
-        res.status(429).json({
-          error: 'Too Many Requests',
-          message: 'Rate limit exceeded. Please try again later.',
-          retryAfter: Math.ceil(config.security.rateLimit.windowMs / 1000),
-        });
-      },
-    });
-    
-    this.app.use('/api/', limiter);
+    // Financial transaction security middleware
+    this.app.use(securityHardening.financialSecurityMiddleware);
 
     // Request logging middleware
     if (config.monitoring.enableRequestLogging) {
@@ -173,9 +135,6 @@ class DwayBankServer {
     if (config.monitoring.enablePerformanceMonitoring) {
       this.app.use(this.performanceMiddleware);
     }
-
-    // Request ID middleware
-    this.app.use(this.requestIdMiddleware);
 
     logger.info('Middleware configuration completed');
   }
@@ -251,6 +210,9 @@ class DwayBankServer {
 
     // KYC routes
     this.app.use('/api/v1/kyc', kycRoutes);
+
+    // User Profile routes
+    this.app.use('/api/v1/profile', userProfileRoutes);
 
     // Financial routes
     this.app.use('/api/v1/accounts', accountRoutes);
@@ -409,6 +371,7 @@ class DwayBankServer {
               oauth: '/oauth/v1',
               oidc: '/.well-known/openid_configuration',
               kyc: '/api/v1/kyc',
+              profile: '/api/v1/profile',
             },
           });
 
