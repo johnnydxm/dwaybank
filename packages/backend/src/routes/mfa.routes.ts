@@ -222,6 +222,12 @@ router.post('/setup',
           email,
           isPrimary,
         });
+      } else if (method === 'biometric') {
+        setupResult = await mfaService.setupBiometric({
+          userId,
+          method,
+          isPrimary,
+        });
       }
 
       auditLogger.info('MFA setup initiated', {

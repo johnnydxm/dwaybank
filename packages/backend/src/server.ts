@@ -7,6 +7,7 @@ import { config, validateCriticalConfig } from './config/environment';
 import { initializeDatabases, closeDatabases, checkDatabaseHealth } from './config/database';
 import { initializeMFAService, setMFAService } from './services/mfa.service';
 import { initializeSecurityService, setSecurityService } from './services/security.service';
+import { initializeKYCService, setKYCService } from './services/kyc.service';
 import logger, { auditLogger, httpLogger, performanceLogger } from './config/logger';
 import { createServer } from 'http';
 import { performance } from 'perf_hooks';
@@ -14,6 +15,8 @@ import { performance } from 'perf_hooks';
 // Import routes
 import mfaRoutes from './routes/mfa.routes';
 import authRoutes from './routes/auth.routes';
+import oauthRoutes from './routes/oauth.routes';
+import kycRoutes from './routes/kyc.routes';
 import accountRoutes from './routes/account.routes';
 import transactionRoutes from './routes/transaction.routes';
 
@@ -51,6 +54,10 @@ class DwayBankServer {
       // Initialize Security service
       const securityServiceInstance = await initializeSecurityService(postgres);
       setSecurityService(securityServiceInstance);
+      
+      // Initialize KYC service
+      const kycServiceInstance = await initializeKYCService(postgres);
+      setKYCService(kycServiceInstance);
       
       // Configure middleware
       this.configureMiddleware();
@@ -238,6 +245,13 @@ class DwayBankServer {
     // Authentication routes
     this.app.use('/api/v1/auth', authRoutes);
 
+    // OAuth 2.0 and OpenID Connect routes
+    this.app.use('/oauth/v1', oauthRoutes);
+    this.app.use('/.well-known', oauthRoutes);
+
+    // KYC routes
+    this.app.use('/api/v1/kyc', kycRoutes);
+
     // Financial routes
     this.app.use('/api/v1/accounts', accountRoutes);
     this.app.use('/api/v1/transactions', transactionRoutes);
@@ -392,6 +406,9 @@ class DwayBankServer {
               health: '/health',
               api: '/api',
               auth: '/api/v1/auth',
+              oauth: '/oauth/v1',
+              oidc: '/.well-known/openid_configuration',
+              kyc: '/api/v1/kyc',
             },
           });
 
