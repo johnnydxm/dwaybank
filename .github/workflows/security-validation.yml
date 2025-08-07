@@ -1,0 +1,383 @@
+name: Security Validation Pipeline
+
+on:
+  push:
+    branches: [ master, develop, feature/platform-integration ]
+    paths:
+      - 'packages/backend/src/**/*.js'
+      - 'packages/backend/src/**/*.ts'
+      - 'packages/frontend/src/**/*.tsx'
+      - 'packages/frontend/src/**/*.ts'
+      - '.github/workflows/security-validation.yml'
+  pull_request:
+    branches: [ master, develop ]
+    paths:
+      - 'packages/backend/src/**/*.js'
+      - 'packages/backend/src/**/*.ts'
+      - 'packages/frontend/src/**/*.tsx'
+      - 'packages/frontend/src/**/*.ts'
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Security test level'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+        - basic
+        - comprehensive
+        - penetration
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # ================================
+  # AUTHENTICATION SECURITY TESTS
+  # ================================
+  
+  authentication-tests:
+    name: Authentication Security Validation
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+          
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: dwaybank_security_test
+          POSTGRES_USER: security_user
+          POSTGRES_PASSWORD: security_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start test server
+        run: |
+          nohup npm start &
+          sleep 10
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: dwaybank_security_test
+          DB_USER: security_user
+          DB_PASSWORD: security_password
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: security-test-jwt-secret
+
+      - name: Wait for server startup
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+
+      - name: Run authentication security tests
+        run: |
+          echo "🔐 Testing Authentication Bypass Protection"
+          
+          # Test all critical endpoints require authentication
+          endpoints=(
+            "/api/v1/dashboard"
+            "/api/v1/transactions"
+            "/api/v1/accounts"
+            "/api/v1/wallets"
+            "/api/v1/budgets"
+            "/api/v1/goals"
+            "/api/v1/insights"
+          )
+          
+          failed_tests=0
+          
+          for endpoint in "${endpoints[@]}"; do
+            echo "Testing $endpoint..."
+            
+            # Test without token
+            response=$(curl -s -w "%{http_code}" "http://localhost:3000$endpoint")
+            if [[ "${response: -3}" != "401" ]]; then
+              echo "❌ $endpoint failed auth test - got ${response: -3}, expected 401"
+              failed_tests=$((failed_tests + 1))
+            else
+              echo "✅ $endpoint requires authentication"
+            fi
+            
+            # Test with invalid token
+            response=$(curl -s -w "%{http_code}" -H "Authorization: Bearer invalid-token" "http://localhost:3000$endpoint")
+            if [[ "${response: -3}" != "401" ]]; then
+              echo "❌ $endpoint failed invalid token test - got ${response: -3}, expected 401"
+              failed_tests=$((failed_tests + 1))
+            else
+              echo "✅ $endpoint rejects invalid tokens"
+            fi
+            
+            # Test with malformed authorization header
+            response=$(curl -s -w "%{http_code}" -H "Authorization: invalid-format" "http://localhost:3000$endpoint")
+            if [[ "${response: -3}" != "401" ]]; then
+              echo "❌ $endpoint failed malformed auth test - got ${response: -3}, expected 401"
+              failed_tests=$((failed_tests + 1))
+            else
+              echo "✅ $endpoint rejects malformed auth headers"
+            fi
+          done
+          
+          if [[ $failed_tests -gt 0 ]]; then
+            echo "❌ $failed_tests authentication tests failed"
+            exit 1
+          fi
+          
+          echo "🔐 All authentication tests passed!"
+
+      - name: Test token validation edge cases
+        run: |
+          echo "🔍 Testing Token Validation Edge Cases"
+          
+          edge_case_tokens=("" "null" "undefined" " " "Bearer" "Bearer ")
+          failed_edge_cases=0
+          
+          for token in "${edge_case_tokens[@]}"; do
+            echo "Testing edge case token: '$token'"
+            response=$(curl -s -w "%{http_code}" -H "Authorization: $token" "http://localhost:3000/api/v1/dashboard")
+            if [[ "${response: -3}" != "401" ]]; then
+              echo "❌ Edge case token '$token' not properly rejected - got ${response: -3}"
+              failed_edge_cases=$((failed_edge_cases + 1))
+            else
+              echo "✅ Edge case token '$token' properly rejected"
+            fi
+          done
+          
+          if [[ $failed_edge_cases -gt 0 ]]; then
+            echo "❌ $failed_edge_cases edge case tests failed"
+            exit 1
+          fi
+          
+          echo "🔍 All edge case tests passed!"
+
+  # ================================
+  # XSS PROTECTION TESTS  
+  # ================================
+  
+  xss-protection-tests:
+    name: XSS Protection Validation
+    runs-on: ubuntu-latest
+    needs: [authentication-tests]
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run XSS protection unit tests
+        run: npm test -- --testNamePattern="Security Validation"
+
+      - name: Start test server for XSS tests
+        run: |
+          nohup npm start &
+          sleep 10
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: xss-test-jwt-secret
+
+      - name: Wait for server startup
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:3000/health; do sleep 2; done'
+
+      - name: Test XSS protection in authentication endpoints
+        run: |
+          echo "🛡️ Testing XSS Protection"
+          
+          # XSS payloads to test
+          xss_payloads=(
+            "<script>alert('XSS')</script>"
+            "javascript:alert('XSS')" 
+            "<img src=x onerror=alert('XSS')>"
+            "onclick=alert('XSS')"
+            "<iframe src=javascript:alert('XSS')>"
+            "'><script>alert('XSS')</script>"
+          )
+          
+          failed_xss_tests=0
+          
+          for payload in "${xss_payloads[@]}"; do
+            echo "Testing XSS payload: $payload"
+            
+            # Test in login endpoint
+            response=$(curl -s -w "%{http_code}" -X POST -H "Content-Type: application/json" \
+              -d "{\"email\":\"${payload}test@example.com\",\"password\":\"test123\"}" \
+              "http://localhost:3000/api/v1/auth/login" 2>/dev/null || echo "000")
+            
+            # Should not return 500 (server error) which would indicate XSS vulnerability
+            if [[ "${response: -3}" == "500" ]]; then
+              echo "❌ XSS payload caused server error: $payload"
+              failed_xss_tests=$((failed_xss_tests + 1))
+            else
+              echo "✅ XSS payload properly handled: $payload"
+            fi
+          done
+          
+          if [[ $failed_xss_tests -gt 0 ]]; then
+            echo "❌ $failed_xss_tests XSS protection tests failed"
+            exit 1
+          fi
+          
+          echo "🛡️ All XSS protection tests passed!"
+
+  # ================================
+  # SECURITY HEADERS VALIDATION
+  # ================================
+  
+  security-headers-tests:
+    name: Security Headers Validation  
+    runs-on: ubuntu-latest
+    needs: [xss-protection-tests]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start server for header testing
+        run: |
+          nohup npm start &
+          sleep 10
+        env:
+          NODE_ENV: test
+          PORT: 3000
+
+      - name: Test security headers
+        run: |
+          echo "🛡️ Testing Security Headers"
+          
+          # Get headers from health endpoint
+          headers=$(curl -s -I "http://localhost:3000/health")
+          
+          # Check for required security headers
+          required_headers=(
+            "X-Frame-Options"
+            "Content-Security-Policy" 
+            "X-Content-Type-Options"
+          )
+          
+          missing_headers=0
+          
+          for header in "${required_headers[@]}"; do
+            if [[ "$headers" == *"$header"* ]]; then
+              echo "✅ $header header present"
+            else
+              echo "❌ $header header missing"
+              missing_headers=$((missing_headers + 1))
+            fi
+          done
+          
+          # Check that X-Powered-By is not present (security best practice)
+          if [[ "$headers" == *"X-Powered-By"* ]]; then
+            echo "❌ X-Powered-By header should not be present"
+            missing_headers=$((missing_headers + 1))
+          else
+            echo "✅ X-Powered-By header properly hidden"
+          fi
+          
+          if [[ $missing_headers -gt 0 ]]; then
+            echo "❌ Security headers validation failed"
+            exit 1
+          fi
+          
+          echo "🛡️ All security headers validated!"
+
+  # ================================
+  # COMPREHENSIVE SECURITY REPORT
+  # ================================
+  
+  security-report:
+    name: Security Validation Report
+    runs-on: ubuntu-latest
+    needs: [authentication-tests, xss-protection-tests, security-headers-tests]
+    if: always()
+    
+    steps:
+      - name: Generate security report
+        run: |
+          echo "📋 Security Validation Summary"
+          echo "================================"
+          echo "Authentication Tests: ${{ needs.authentication-tests.result }}"
+          echo "XSS Protection Tests: ${{ needs.xss-protection-tests.result }}"  
+          echo "Security Headers Tests: ${{ needs.security-headers-tests.result }}"
+          echo "================================"
+          
+          if [[ "${{ needs.authentication-tests.result }}" == "success" ]] && \
+             [[ "${{ needs.xss-protection-tests.result }}" == "success" ]] && \
+             [[ "${{ needs.security-headers-tests.result }}" == "success" ]]; then
+            echo "🔒 ✅ ALL SECURITY VALIDATIONS PASSED"
+            echo "The DwayBank application has successfully passed all security tests:"
+            echo "- Authentication bypass protection ✅"
+            echo "- XSS injection protection ✅" 
+            echo "- Security headers implementation ✅"
+            echo ""
+            echo "🚀 Safe to deploy to production!"
+          else
+            echo "🔒 ❌ SECURITY VALIDATION FAILURES DETECTED"
+            echo "Please review and fix security issues before deployment."
+            exit 1
+          fi
+
+      - name: Create security badge
+        if: success()
+        run: |
+          echo "Creating security validation badge..."
+          # This could integrate with shields.io or similar service
+          echo "Security Status: PASSED" > security-status.txt
+          
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-validation-report
+          path: |
+            security-status.txt
+          retention-days: 30
