@@ -173,6 +173,7 @@ export interface UserSession extends BaseEntity {
   status: SessionStatus;
   expires_at: Date;
   last_used: Date;
+  last_activity: Date;
 }
 
 export interface SessionInfo {
@@ -294,6 +295,23 @@ export interface ApiError {
 }
 
 // ============================================================================
+// AUTHENTICATION CONTEXT & REQUEST TYPES
+// ============================================================================
+
+export interface AuthenticationContext {
+  ipAddress: string;
+  userAgent: string;
+  deviceType?: 'mobile' | 'desktop' | 'tablet' | 'api';
+  country?: string;
+  city?: string;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+  context: AuthenticationContext;
+}
+
+// ============================================================================
 // SECURITY TYPES
 // ============================================================================
 
@@ -328,3 +346,197 @@ export type DeepPartial<T> = {
 
 export type Nullable<T> = T | null;
 export type Optional<T> = T | undefined;
+
+// ============================================================================
+// WALLET INTEGRATION TYPES
+// ============================================================================
+
+export type WalletType = 'apple_pay' | 'google_pay' | 'metamask' | 'samsung_pay' | 'paypal' | 'manual';
+export type WalletStatus = 'connected' | 'disconnected' | 'syncing' | 'error' | 'pending_auth';
+export type PaymentMethodType = 'credit_card' | 'debit_card' | 'bank_account' | 'crypto_wallet' | 'digital_wallet';
+
+export interface WalletConnection extends BaseEntity {
+  user_id: string;
+  wallet_type: WalletType;
+  external_wallet_id: string;
+  display_name: string;
+  status: WalletStatus;
+  last_sync: Date;
+  sync_frequency: number; // minutes
+  metadata: any; // wallet-specific data
+  access_token?: string; // encrypted
+  refresh_token?: string; // encrypted
+  token_expires_at?: Date;
+  error_message?: string;
+  sync_count: number;
+  is_primary: boolean;
+}
+
+export interface PaymentMethod extends BaseEntity {
+  wallet_connection_id: string;
+  external_method_id: string;
+  type: PaymentMethodType;
+  display_name: string;
+  last_four_digits?: string;
+  card_brand?: string; // visa, mastercard, amex, etc.
+  expiry_month?: number;
+  expiry_year?: number;
+  currency: string;
+  is_active: boolean;
+  metadata: any;
+}
+
+export interface WalletBalance {
+  payment_method_id: string;
+  current_balance: number;
+  available_balance: number;
+  pending_balance: number;
+  currency: string;
+  last_updated: Date;
+  exchange_rate_usd?: number; // for crypto/foreign currency
+  balance_source: 'api' | 'cache' | 'manual';
+}
+
+export interface WalletTransaction {
+  id: string;
+  wallet_connection_id: string;
+  payment_method_id?: string;
+  external_transaction_id: string;
+  amount: number;
+  currency: string;
+  description: string;
+  merchant_name?: string;
+  merchant_category?: string;
+  transaction_date: Date;
+  transaction_type: 'debit' | 'credit' | 'transfer' | 'fee';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  metadata: any;
+  created_at: Date;
+}
+
+// ============================================================================
+// WALLET INTEGRATION REQUEST/RESPONSE TYPES
+// ============================================================================
+
+export interface ConnectWalletRequest {
+  wallet_type: WalletType;
+  auth_code?: string;
+  access_token?: string;
+  display_name?: string;
+  metadata?: any;
+}
+
+export interface ConnectWalletResponse {
+  connection_id: string;
+  status: WalletStatus;
+  payment_methods: PaymentMethod[];
+  message: string;
+  auth_url?: string; // for OAuth flows
+}
+
+export interface SyncWalletRequest {
+  connection_id: string;
+  force_refresh?: boolean;
+}
+
+export interface SyncWalletResponse {
+  connection_id: string;
+  status: WalletStatus;
+  payment_methods_synced: number;
+  transactions_synced: number;
+  balances_updated: number;
+  last_sync: Date;
+  errors?: string[];
+}
+
+export interface WalletDashboardData {
+  total_balance_usd: number;
+  connected_wallets: WalletConnection[];
+  payment_methods: (PaymentMethod & { balance?: WalletBalance })[];
+  recent_transactions: WalletTransaction[];
+  sync_status: {
+    last_full_sync: Date;
+    pending_syncs: number;
+    failed_syncs: number;
+  };
+}
+
+// ============================================================================
+// APPLE PAY INTEGRATION TYPES
+// ============================================================================
+
+export interface ApplePayCard {
+  deviceAccountIdentifier: string;
+  deviceAccountNumberSuffix: string;
+  localizedDescription: string;
+  paymentNetwork: string;
+  passActivationState: 'activated' | 'suspended' | 'deactivated';
+  passTypeIdentifier: string;
+}
+
+export interface ApplePayTokenRequest {
+  merchantIdentifier: string;
+  domainName: string;
+  displayName: string;
+  certificateChain: string[];
+}
+
+// ============================================================================
+// GOOGLE PAY INTEGRATION TYPES
+// ============================================================================
+
+export interface GooglePayCard {
+  resourceId: string;
+  cardDisplayName: string;
+  lastFourDigits: string;
+  cardNetwork: string;
+  tokenizationData: {
+    type: string;
+    token: string;
+  };
+  issuerDisplayName: string;
+  cardClass: 'CREDIT' | 'DEBIT' | 'PREPAID';
+}
+
+export interface GooglePayAPIResponse<T> {
+  result: T[];
+  nextPageToken?: string;
+  error?: {
+    code: number;
+    message: string;
+    status: string;
+  };
+}
+
+// ============================================================================
+// METAMASK INTEGRATION TYPES
+// ============================================================================
+
+export interface MetaMaskAccount {
+  address: string;
+  chainId: number;
+  networkName: string;
+  balance: string; // in wei for ETH
+  balanceFormatted: string; // in ETH
+}
+
+export interface MetaMaskTokenBalance {
+  tokenAddress: string;
+  tokenSymbol: string;
+  tokenName: string;
+  decimals: number;
+  balance: string;
+  balanceFormatted: string;
+}
+
+export interface WalletConnectSession {
+  sessionId: string;
+  accounts: string[];
+  chainId: number;
+  peerMeta: {
+    description: string;
+    url: string;
+    icons: string[];
+    name: string;
+  };
+}

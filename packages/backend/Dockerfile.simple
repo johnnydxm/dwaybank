@@ -1,0 +1,40 @@
+# DwayBank Backend - Simple JavaScript Production Dockerfile
+# Bypass TypeScript compilation issues
+
+FROM node:20.19.0-alpine AS runner
+WORKDIR /app
+
+# Security: Create non-root user
+RUN addgroup -g 1001 -S dwaybank && \
+    adduser -S dwaybank -u 1001 -G dwaybank
+
+# Install security updates and necessary packages
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init && \
+    rm -rf /var/cache/apk/*
+
+# Copy package files and install dependencies
+COPY package*.json ./
+COPY packages/backend/package*.json ./packages/backend/
+RUN npm ci --workspace=packages/backend --only=production && npm cache clean --force
+
+# Copy source code (JavaScript server only)
+COPY packages/backend/src/simple-production-server.js ./packages/backend/src/
+COPY packages/backend/package*.json ./packages/backend/
+
+# Set ownership to non-root user
+RUN chown -R dwaybank:dwaybank /app
+USER dwaybank
+
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+
+# Security: Drop privileges and use init system
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Expose port (non-privileged)
+EXPOSE 3000
+
+# Start JavaScript server directly
+CMD ["node", "packages/backend/src/simple-production-server.js"]

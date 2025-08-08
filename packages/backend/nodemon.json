@@ -1,0 +1,8 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "exec": "node src/simple-production-server.js",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

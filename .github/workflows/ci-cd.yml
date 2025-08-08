@@ -137,6 +137,11 @@ jobs:
           JWT_SECRET: test-jwt-secret-key
           SESSION_SECRET: test-session-secret-key
 
+      - name: Run security validation tests
+        run: npm test -- --testNamePattern="Security Validation"
+        env:
+          NODE_ENV: test
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
         with:
@@ -246,6 +251,37 @@ jobs:
           NODE_ENV: integration
           API_BASE_URL: http://localhost:3000
 
+      - name: Run live security validation
+        run: |
+          echo "🔒 Testing authentication protection..."
+          # Test dashboard without auth - should return 401
+          response=$(curl -s -w "%{http_code}" http://localhost:3000/api/v1/dashboard)
+          if [[ "${response: -3}" != "401" ]]; then
+            echo "❌ Dashboard authentication test failed - got ${response: -3}, expected 401"
+            exit 1
+          fi
+          echo "✅ Dashboard authentication protection verified"
+          
+          # Test with invalid token - should return 401
+          response=$(curl -s -w "%{http_code}" -H "Authorization: Bearer invalid" http://localhost:3000/api/v1/dashboard)
+          if [[ "${response: -3}" != "401" ]]; then
+            echo "❌ Invalid token test failed - got ${response: -3}, expected 401"
+            exit 1
+          fi
+          echo "✅ Invalid token protection verified"
+          
+          # Test XSS protection in login
+          response=$(curl -s -w "%{http_code}" -X POST -H "Content-Type: application/json" \
+            -d '{"email":"<script>alert(\"XSS\")</script>test@example.com","password":"test123"}' \
+            http://localhost:3000/api/v1/auth/login)
+          if [[ "${response: -3}" == "500" ]]; then
+            echo "❌ XSS protection test failed - server error indicates vulnerability"
+            exit 1
+          fi
+          echo "✅ XSS protection verified"
+          
+          echo "🔒 All security validations passed!"
+
   # ================================
   # DEPLOYMENT STAGING
   # ================================
@@ -328,10 +364,11 @@ jobs:
 
       - name: Deploy to production environment
         run: |
-          echo "🚀 Deploying to production environment"
-          echo "Image: ${{ env.DOCKER_IMAGE }}:${{ github.sha }}"
-          # Add your production deployment commands here
-          # Example: kubectl, helm, or cloud provider CLI
+          echo "🚀 Deploying to production environment with security validation"
+          chmod +x ./scripts/secure-deploy.sh
+          ENVIRONMENT=production GITHUB_SHA=${{ github.sha }} ./scripts/secure-deploy.sh
+        env:
+          DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
 
       - name: Create GitHub Release
         uses: actions/create-release@v1
@@ -390,9 +427,38 @@ jobs:
 
       - name: Security validation
         run: |
-          echo "🔒 Running security validation"
-          # Add your security validation here
-          # Example: SSL certificate validation, security headers check
+          echo "🔒 Running production security validation"
+          
+          # Test authentication is enforced in production
+          echo "Testing authentication protection..."
+          response=$(curl -s -w "%{http_code}" https://api.dwaybank.com/api/v1/dashboard || echo "Connection failed")
+          if [[ "$response" != *"401" ]]; then
+            echo "❌ Production authentication test failed"
+            exit 1
+          fi
+          echo "✅ Production authentication verified"
+          
+          # Test security headers
+          echo "Testing security headers..."
+          headers=$(curl -s -I https://api.dwaybank.com/ || echo "Connection failed")
+          if [[ "$headers" == *"X-Frame-Options"* ]] && [[ "$headers" == *"Content-Security-Policy"* ]]; then
+            echo "✅ Security headers verified"
+          else
+            echo "❌ Missing security headers"
+            exit 1
+          fi
+          
+          # Test SSL/TLS configuration
+          echo "Testing SSL/TLS..."
+          ssl_check=$(curl -s -I https://api.dwaybank.com/ | head -1 || echo "SSL failed")
+          if [[ "$ssl_check" == *"200"* ]]; then
+            echo "✅ SSL/TLS verified"
+          else
+            echo "❌ SSL/TLS check failed"
+            exit 1
+          fi
+          
+          echo "🔒 Production security validation completed"
 
   # ================================
   # CLEANUP & NOTIFICATIONS

@@ -1,0 +1,282 @@
+# ================================================================
+# DwayBank Smart Wallet MVP - Monitoring Alerts Configuration
+# Prometheus Alert Rules for Wallet Operations
+# ================================================================
+
+groups:
+  - name: dwaybank_wallet_alerts
+    rules:
+      # ===== WALLET SYNC MONITORING =====
+      - alert: WalletSyncFailureRate
+        expr: |
+          (
+            sum(rate(wallet_sync_failed_total[5m])) by (wallet_type) /
+            sum(rate(wallet_sync_total[5m])) by (wallet_type)
+          ) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          component: wallet_sync
+          service: dwaybank-backend
+        annotations:
+          summary: "High wallet sync failure rate detected"
+          description: "Wallet sync failure rate for {{ $labels.wallet_type }} is {{ $value | humanizePercentage }} over the last 5 minutes"
+          runbook_url: "https://docs.dwaybank.com/runbooks/wallet-sync-failures"
+
+      - alert: WalletSyncDown
+        expr: |
+          sum(rate(wallet_sync_total[5m])) by (wallet_type) == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: wallet_sync
+          service: dwaybank-backend
+        annotations:
+          summary: "Wallet sync completely stopped"
+          description: "No wallet sync operations for {{ $labels.wallet_type }} in the last 5 minutes"
+          runbook_url: "https://docs.dwaybank.com/runbooks/wallet-sync-down"
+
+      - alert: WalletSyncLatency
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(wallet_sync_duration_seconds_bucket[5m])) by (le, wallet_type)
+          ) > 30
+        for: 3m
+        labels:
+          severity: warning
+          component: wallet_sync
+          service: dwaybank-backend
+        annotations:
+          summary: "High wallet sync latency"
+          description: "95th percentile sync latency for {{ $labels.wallet_type }} is {{ $value }}s"
+          runbook_url: "https://docs.dwaybank.com/runbooks/wallet-sync-latency"
+
+      # ===== PAYMENT PROCESSING MONITORING =====
+      - alert: PaymentFailureRate
+        expr: |
+          (
+            sum(rate(payment_attempts_failed_total[5m])) by (payment_method) /
+            sum(rate(payment_attempts_total[5m])) by (payment_method)
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: payments
+          service: dwaybank-backend
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate for {{ $labels.payment_method }} is {{ $value | humanizePercentage }}"
+          runbook_url: "https://docs.dwaybank.com/runbooks/payment-failures"
+
+      - alert: PaymentProcessingLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(payment_processing_duration_seconds_bucket[5m])) by (le, payment_method)
+          ) > 10
+        for: 3m
+        labels:
+          severity: warning
+          component: payments
+          service: dwaybank-backend
+        annotations:
+          summary: "High payment processing latency"
+          description: "95th percentile payment processing time for {{ $labels.payment_method }} is {{ $value }}s"
+
+      # ===== SECURITY & FRAUD MONITORING =====
+      - alert: HighFraudScore
+        expr: |
+          sum(rate(fraud_attempts_total[5m])) by (fraud_type) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+          component: security
+          service: dwaybank-backend
+        annotations:
+          summary: "High fraud activity detected"
+          description: "Fraud attempts of type {{ $labels.fraud_type }} detected at {{ $value }} attempts per second"
+          runbook_url: "https://docs.dwaybank.com/runbooks/fraud-detection"
+
+      - alert: UnauthorizedAccessAttempts
+        expr: |
+          sum(rate(auth_failures_total[5m])) > 1
+        for: 1m
+        labels:
+          severity: warning
+          component: authentication
+          service: dwaybank-backend
+        annotations:
+          summary: "Multiple authentication failures"
+          description: "{{ $value }} authentication failures per second detected"
+
+      # ===== API PERFORMANCE MONITORING =====
+      - alert: WalletAPILatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="dwaybank-backend",path=~"/api/wallets.*"}[5m])) by (le)
+          ) > 2
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+          service: dwaybank-backend
+        annotations:
+          summary: "High wallet API latency"
+          description: "95th percentile API response time is {{ $value }}s"
+
+      - alert: WalletAPIErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="dwaybank-backend",path=~"/api/wallets.*",code=~"5.."}[5m])) /
+            sum(rate(http_requests_total{job="dwaybank-backend",path=~"/api/wallets.*"}[5m]))
+          ) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+          service: dwaybank-backend
+        annotations:
+          summary: "High wallet API error rate"
+          description: "Wallet API error rate is {{ $value | humanizePercentage }}"
+
+      # ===== DATABASE MONITORING =====
+      - alert: WalletTableLockWait
+        expr: |
+          sum(rate(postgres_locks_count{mode="ExclusiveLock",table=~"wallets|wallet_transactions"}[5m])) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: database
+          service: postgres
+        annotations:
+          summary: "High database lock contention on wallet tables"
+          description: "{{ $value }} exclusive locks per second on wallet tables"
+
+      - alert: WalletDatabaseConnections
+        expr: |
+          sum(postgres_connections_active) / sum(postgres_connections_max) > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          component: database
+          service: postgres
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connection usage is {{ $value | humanizePercentage }}"
+
+      # ===== WALLET BALANCE MONITORING =====
+      - alert: WalletBalanceDiscrepancy
+        expr: |
+          sum(wallet_balance_reconciliation_errors_total) > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: wallet_balance
+          service: dwaybank-backend
+        annotations:
+          summary: "Wallet balance reconciliation error"
+          description: "{{ $value }} wallet balance discrepancies detected"
+          runbook_url: "https://docs.dwaybank.com/runbooks/balance-reconciliation"
+
+      - alert: WalletBalanceSyncStale
+        expr: |
+          time() - wallet_balance_last_updated > 3600
+        for: 0m
+        labels:
+          severity: warning
+          component: wallet_balance
+          service: dwaybank-backend
+        annotations:
+          summary: "Stale wallet balance data"
+          description: "Wallet balance has not been updated for over 1 hour"
+
+      # ===== EXTERNAL API MONITORING =====
+      - alert: ExternalWalletAPIDown
+        expr: |
+          up{job=~".*wallet.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: external_api
+        annotations:
+          summary: "External wallet API is down"
+          description: "{{ $labels.job }} is not responding"
+
+      - alert: ExternalWalletAPILatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(external_api_duration_seconds_bucket{service=~".*wallet.*"}[5m])) by (le, service)
+          ) > 5
+        for: 3m
+        labels:
+          severity: warning
+          component: external_api
+        annotations:
+          summary: "High external wallet API latency"
+          description: "95th percentile latency for {{ $labels.service }} is {{ $value }}s"
+
+      # ===== SYSTEM RESOURCE MONITORING =====
+      - alert: WalletServiceMemoryUsage
+        expr: |
+          (
+            process_resident_memory_bytes{job="dwaybank-backend"} /
+            node_memory_MemTotal_bytes
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: resources
+          service: dwaybank-backend
+        annotations:
+          summary: "High memory usage in wallet service"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: WalletServiceCPUUsage
+        expr: |
+          rate(process_cpu_seconds_total{job="dwaybank-backend"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: resources
+          service: dwaybank-backend
+        annotations:
+          summary: "High CPU usage in wallet service"
+          description: "CPU usage is {{ $value | humanizePercentage }}"
+
+  # ===== BUSINESS METRICS ALERTS =====
+  - name: dwaybank_business_alerts
+    rules:
+      - alert: LowWalletConnections
+        expr: |
+          sum(wallets_connected_total) < 100
+        for: 10m
+        labels:
+          severity: info
+          component: business_metrics
+        annotations:
+          summary: "Low wallet connection count"
+          description: "Only {{ $value }} wallets connected, below expected threshold"
+
+      - alert: TransactionVolumeAnomaly
+        expr: |
+          abs(
+            sum(rate(wallet_transactions_total[1h])) -
+            sum(rate(wallet_transactions_total[1h] offset 24h))
+          ) / sum(rate(wallet_transactions_total[1h] offset 24h)) > 0.5
+        for: 10m
+        labels:
+          severity: info
+          component: business_metrics
+        annotations:
+          summary: "Unusual transaction volume"
+          description: "Transaction volume deviation of {{ $value | humanizePercentage }} from same time yesterday"
+
+      - alert: NewUserRegistrations
+        expr: |
+          sum(rate(user_registrations_total[1h])) < 1
+        for: 2h
+        labels:
+          severity: info
+          component: business_metrics
+        annotations:
+          summary: "Low user registration rate"
+          description: "Less than 1 user registration per hour"

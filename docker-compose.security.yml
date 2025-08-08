@@ -1,0 +1,124 @@
+# DwayBank Security Testing Docker Compose
+# Used for automated security validation in CI/CD pipeline
+
+version: '3.8'
+
+networks:
+  dwaybank-security-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+volumes:
+  postgres-security-data:
+    driver: local
+  redis-security-data:
+    driver: local
+
+services:
+  # PostgreSQL Database - Security Testing
+  postgres-security:
+    image: postgres:15.4-alpine
+    container_name: dwaybank-postgres-security
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dwaybank_security
+      POSTGRES_USER: security_user
+      POSTGRES_PASSWORD: security_test_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - postgres-security-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5433:5432"
+    networks:
+      - dwaybank-security-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U security_user -d dwaybank_security"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache - Security Testing
+  redis-security:
+    image: redis:7.2.3-alpine
+    container_name: dwaybank-redis-security
+    restart: unless-stopped
+    command: >
+      redis-server 
+      --requirepass security_test_redis_password
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-security-data:/data
+    ports:
+      - "6380:6379"
+    networks:
+      - dwaybank-security-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # DwayBank Backend - Security Testing
+  backend-security:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile.simple
+    container_name: dwaybank-backend-security
+    restart: unless-stopped
+    environment:
+      NODE_ENV: test
+      PORT: 3000
+      
+      # Database Configuration
+      DB_HOST: postgres-security
+      DB_PORT: 5432
+      DB_NAME: dwaybank_security
+      DB_USER: security_user
+      DB_PASSWORD: security_test_password
+      DB_SSL: "false"
+      
+      # Redis Configuration  
+      REDIS_HOST: redis-security
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: security_test_redis_password
+      
+      # JWT & Security
+      JWT_SECRET: security_test_jwt_secret_key_for_validation
+      JWT_REFRESH_SECRET: security_test_refresh_key_for_validation
+      BCRYPT_ROUNDS: 8  # Reduced for faster testing
+      
+      # Logging
+      LOG_LEVEL: error  # Reduced logging for security tests
+      LOG_FORMAT: json
+      
+    ports:
+      - "3001:3000"
+    networks:
+      - dwaybank-security-network
+    depends_on:
+      postgres-security:
+        condition: service_healthy
+      redis-security:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=50m
+    ulimits:
+      nproc: 1024
+      nofile:
+        soft: 1024
+        hard: 2048

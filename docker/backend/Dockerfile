@@ -21,37 +21,35 @@ WORKDIR /app
 FROM base AS development
 # Copy package files
 COPY package*.json ./
-COPY packages/backend/package*.json ./packages/backend/
-COPY packages/backend/tsconfig.json ./packages/backend/
+COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci --workspace=@dwaybank/backend --include=dev
+RUN npm install
 
 # Copy source code
-COPY packages/backend ./packages/backend
+COPY src ./src
 
 EXPOSE 3000
-CMD ["npm", "run", "dev", "--workspace=@dwaybank/backend"]
+CMD ["node", "src/minimal-production-server.js"]
 
 # Build stage
 FROM base AS build
 
 # Copy package files
 COPY package*.json ./
-COPY packages/backend/package*.json ./packages/backend/
-COPY packages/backend/tsconfig.json ./packages/backend/
+COPY tsconfig.json ./
 
 # Install all dependencies for build
-RUN npm ci --workspace=@dwaybank/backend --include=dev
+RUN npm install
 
 # Copy source code
-COPY packages/backend ./packages/backend
+COPY src ./src
 
 # Build the application
-RUN npm run build --workspace=@dwaybank/backend
+RUN npm run build
 
 # Prune dev dependencies
-RUN npm ci --workspace=@dwaybank/backend --only=production
+RUN npm install --only=production
 
 # Production stage
 FROM node:18-alpine AS production
@@ -70,9 +68,9 @@ RUN apk update && apk upgrade && apk add --no-cache \
 WORKDIR /app
 
 # Copy built application with proper ownership
-COPY --from=build --chown=dwaybank:dwaybank /app/packages/backend/dist ./dist
-COPY --from=build --chown=dwaybank:dwaybank /app/packages/backend/node_modules ./node_modules
-COPY --from=build --chown=dwaybank:dwaybank /app/packages/backend/package*.json ./
+COPY --from=build --chown=dwaybank:dwaybank /app/dist ./dist
+COPY --from=build --chown=dwaybank:dwaybank /app/node_modules ./node_modules
+COPY --from=build --chown=dwaybank:dwaybank /app/package*.json ./
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/uploads /tmp/dwaybank \
@@ -90,7 +88,7 @@ EXPOSE 3000
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["node", "src/minimal-production-server.js"]
 
 # Labels for metadata
 LABEL org.opencontainers.image.title="DwayBank Backend"

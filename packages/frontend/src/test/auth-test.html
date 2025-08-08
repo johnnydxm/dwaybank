@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DwayBank Auth Test</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>DwayBank Authentication API Test</h1>
+    
+    <div class="test-result info">
+        <h3>Test Status</h3>
+        <div id="status">Ready to test...</div>
+    </div>
+    
+    <h2>Test Registration</h2>
+    <button onclick="testRegistration()">Test Registration API</button>
+    <button onclick="testLogin()">Test Login API</button>
+    <button onclick="testInvalidLogin()">Test Invalid Login</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        const API_BASE = 'http://localhost:3004/api/v1';
+        
+        function updateStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML = `<span class="${type}">${message}</span>`;
+        }
+        
+        function addResult(test, result, success = true) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${success ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `
+                <h3>${test}</h3>
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        async function testRegistration() {
+            updateStatus('Testing registration...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: `test${Date.now()}@example.com`,
+                        password: 'SecurePass123',
+                        first_name: 'Test',
+                        last_name: 'User'
+                    })
+                });
+                
+                const data = await response.json();
+                addResult('Registration Test', {
+                    status: response.status,
+                    success: response.ok,
+                    data: data
+                }, response.ok);
+                
+                updateStatus(response.ok ? 'Registration test passed!' : 'Registration test failed!', 
+                           response.ok ? 'success' : 'error');
+                           
+            } catch (error) {
+                addResult('Registration Test', { error: error.message }, false);
+                updateStatus('Registration test failed with network error!', 'error');
+            }
+        }
+        
+        async function testLogin() {
+            updateStatus('Testing login...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@dwaybank.com',
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                addResult('Login Test', {
+                    status: response.status,
+                    success: response.ok,
+                    data: data
+                }, response.ok);
+                
+                updateStatus(response.ok ? 'Login test passed!' : 'Login test completed (check if expected)', 'info');
+                           
+            } catch (error) {
+                addResult('Login Test', { error: error.message }, false);
+                updateStatus('Login test failed with network error!', 'error');
+            }
+        }
+        
+        async function testInvalidLogin() {
+            updateStatus('Testing invalid login...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'invalid@example.com',
+                        password: 'wrongpassword'
+                    })
+                });
+                
+                const data = await response.json();
+                const expectedError = response.status === 401 || response.status === 400;
+                addResult('Invalid Login Test', {
+                    status: response.status,
+                    expectedError: expectedError,
+                    data: data
+                }, expectedError);
+                
+                updateStatus(expectedError ? 'Invalid login test passed!' : 'Invalid login test failed!', 
+                           expectedError ? 'success' : 'error');
+                           
+            } catch (error) {
+                addResult('Invalid Login Test', { error: error.message }, false);
+                updateStatus('Invalid login test failed with network error!', 'error');
+            }
+        }
+        
+        // Auto-run tests on page load
+        window.onload = function() {
+            updateStatus('Page loaded. Backend should be running on port 3004', 'info');
+        };
+    </script>
+</body>
+</html>

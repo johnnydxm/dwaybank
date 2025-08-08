@@ -1,0 +1,45 @@
+# Simple Dockerfile for DwayBank Backend using JavaScript
+FROM node:20.19.0-alpine
+
+# Install security updates and dumb-init
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init && \
+    rm -rf /var/cache/apk/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY packages/backend/package*.json ./packages/backend/
+
+# Install dependencies
+RUN npm ci --workspace=packages/backend --only=production && \
+    npm cache clean --force
+
+# Copy backend source
+COPY packages/backend/src ./packages/backend/src
+
+# Create non-root user
+RUN addgroup -g 1001 -S dwaybank && \
+    adduser -S dwaybank -u 1001 -G dwaybank
+
+# Change ownership
+RUN chown -R dwaybank:dwaybank /app
+USER dwaybank
+
+# Expose port
+EXPOSE 3000
+
+# Set working directory
+WORKDIR /app/packages/backend
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { \
+    if (res.statusCode === 200) process.exit(0); else process.exit(1); \
+  }).on('error', () => process.exit(1));"
+
+# Start the server using dumb-init
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["node", "src/simple-production-server.js"]

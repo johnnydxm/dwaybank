@@ -107,28 +107,43 @@ redis.on('reconnecting', () => {
  * Initialize database connections
  */
 export const initializeDatabases = async (): Promise<{ postgres: Pool; redis: RedisClientType }> => {
+  const errors: string[] = [];
+  
+  // Try PostgreSQL connection
   try {
-    // Test PostgreSQL connection
     const client = await pool.connect();
     await client.query('SELECT NOW()');
     client.release();
     logger.info('PostgreSQL connection established successfully');
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    logger.warn('PostgreSQL connection failed - continuing without database', { 
+      error: errorMsg 
+    });
+    errors.push(`PostgreSQL: ${errorMsg}`);
+  }
 
-    // Connect to Redis
+  // Try Redis connection
+  try {
     if (!redis.isOpen) {
       await redis.connect();
       logger.info('Redis connection established successfully');
     }
-
-    // Return the database instances
-    return { postgres: pool, redis };
-
   } catch (error) {
-    logger.error('Database initialization failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    logger.warn('Redis connection failed - continuing without cache', { 
+      error: errorMsg 
     });
-    throw error;
+    errors.push(`Redis: ${errorMsg}`);
   }
+
+  // Log any connection failures but don't throw
+  if (errors.length > 0) {
+    logger.warn('Some database connections failed', { errors });
+  }
+
+  // Return the database instances (may have connection issues)
+  return { postgres: pool, redis };
 };
 
 /**
@@ -161,7 +176,7 @@ export const checkDatabaseHealth = async (): Promise<{ postgres: boolean; redis:
     client.release();
     postgresHealth = true;
   } catch (error) {
-    logger.error('PostgreSQL health check failed', { 
+    logger.debug('PostgreSQL health check failed', { 
       error: error instanceof Error ? error.message : 'Unknown error' 
     });
   }
@@ -172,7 +187,7 @@ export const checkDatabaseHealth = async (): Promise<{ postgres: boolean; redis:
       redisHealth = true;
     }
   } catch (error) {
-    logger.error('Redis health check failed', { 
+    logger.debug('Redis health check failed', { 
       error: error instanceof Error ? error.message : 'Unknown error' 
     });
   }

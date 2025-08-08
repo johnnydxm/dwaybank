@@ -1,12 +1,13 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
+import securityHardening from './middleware/security-hardening.middleware';
 import { config, validateCriticalConfig } from './config/environment';
 import { initializeDatabases, closeDatabases, checkDatabaseHealth } from './config/database';
 import { initializeMFAService, setMFAService } from './services/mfa.service';
 import { initializeSecurityService, setSecurityService } from './services/security.service';
+import { initializeKYCService, setKYCService } from './services/kyc.service';
+import { initializeUserProfileService, setUserProfileService } from './services/user-profile.service';
 import logger, { auditLogger, httpLogger, performanceLogger } from './config/logger';
 import { createServer } from 'http';
 import { performance } from 'perf_hooks';
@@ -14,6 +15,9 @@ import { performance } from 'perf_hooks';
 // Import routes
 import mfaRoutes from './routes/mfa.routes';
 import authRoutes from './routes/auth.routes';
+import oauthRoutes from './routes/oauth.routes';
+import kycRoutes from './routes/kyc.routes';
+import userProfileRoutes from './routes/user-profile.routes';
 import accountRoutes from './routes/account.routes';
 import transactionRoutes from './routes/transaction.routes';
 
@@ -52,6 +56,14 @@ class DwayBankServer {
       const securityServiceInstance = await initializeSecurityService(postgres);
       setSecurityService(securityServiceInstance);
       
+      // Initialize KYC service
+      const kycServiceInstance = await initializeKYCService(postgres);
+      setKYCService(kycServiceInstance);
+      
+      // Initialize User Profile service
+      const userProfileServiceInstance = await initializeUserProfileService(postgres);
+      setUserProfileService(userProfileServiceInstance);
+      
       // Configure middleware
       this.configureMiddleware();
       
@@ -76,39 +88,24 @@ class DwayBankServer {
    * Configure Express middleware
    */
   private configureMiddleware(): void {
-    // Security middleware
-    this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
-        },
-      },
-      hsts: {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true,
-      },
-    }));
+    // Request ID middleware (must be first)
+    this.app.use(securityHardening.requestIdMiddleware);
 
-    // CORS configuration
-    this.app.use(cors({
-      origin: config.security.corsOrigin,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: [
-        'Origin',
-        'X-Requested-With',
-        'Content-Type',
-        'Authorization',
-        'Accept',
-        'X-API-Version',
-        'X-Request-ID',
-      ],
-      exposedHeaders: ['X-Request-ID', 'X-Rate-Limit-Remaining'],
-    }));
+    // Advanced security headers
+    this.app.use(securityHardening.advancedHelmet);
+    this.app.use(securityHardening.securityHeadersMiddleware);
+
+    // Request timeout middleware
+    this.app.use(securityHardening.requestTimeoutMiddleware(30000)); // 30 seconds
+
+    // Suspicious activity detection
+    this.app.use(securityHardening.suspiciousActivityDetection);
+
+    // CORS configuration with enhanced security
+    this.app.use(cors(securityHardening.corsOptions));
+
+    // Input sanitization middleware
+    this.app.use(securityHardening.inputSanitizationMiddleware);
 
     // Compression middleware
     this.app.use(compression({
@@ -122,40 +119,12 @@ class DwayBankServer {
       threshold: 1024,
     }));
 
-    // Body parsing middleware
-    this.app.use(express.json({ 
-      limit: '10mb',
-      strict: true,
-    }));
-    this.app.use(express.urlencoded({ 
-      extended: true, 
-      limit: '10mb',
-    }));
+    // Enhanced body parsing with security validation
+    this.app.use(express.json(securityHardening.jsonParserOptions));
+    this.app.use(express.urlencoded(securityHardening.urlEncodedOptions));
 
-    // Rate limiting
-    const limiter = rateLimit({
-      windowMs: config.security.rateLimit.windowMs,
-      max: config.security.rateLimit.maxRequests,
-      skipSuccessfulRequests: config.security.rateLimit.skipSuccessful,
-      standardHeaders: true,
-      legacyHeaders: false,
-      handler: (req, res) => {
-        auditLogger.warn('Rate limit exceeded', {
-          ip: req.ip,
-          userAgent: req.get('User-Agent'),
-          path: req.path,
-          method: req.method,
-        });
-        
-        res.status(429).json({
-          error: 'Too Many Requests',
-          message: 'Rate limit exceeded. Please try again later.',
-          retryAfter: Math.ceil(config.security.rateLimit.windowMs / 1000),
-        });
-      },
-    });
-    
-    this.app.use('/api/', limiter);
+    // Financial transaction security middleware
+    this.app.use(securityHardening.financialSecurityMiddleware);
 
     // Request logging middleware
     if (config.monitoring.enableRequestLogging) {
@@ -166,9 +135,6 @@ class DwayBankServer {
     if (config.monitoring.enablePerformanceMonitoring) {
       this.app.use(this.performanceMiddleware);
     }
-
-    // Request ID middleware
-    this.app.use(this.requestIdMiddleware);
 
     logger.info('Middleware configuration completed');
   }
@@ -232,15 +198,26 @@ class DwayBankServer {
       });
     });
 
-    // MFA routes
-    this.app.use('/api/v1/mfa', mfaRoutes);
+    // Apply critical operations rate limiting to authentication routes
+    this.app.use('/api/v1/mfa', securityHardening.criticalOperationsLimiter, mfaRoutes);
+    this.app.use('/api/v1/auth', securityHardening.criticalOperationsLimiter, authRoutes);
 
-    // Authentication routes
-    this.app.use('/api/v1/auth', authRoutes);
+    // OAuth 2.0 and OpenID Connect routes with critical rate limiting
+    this.app.use('/oauth/v1', securityHardening.criticalOperationsLimiter, oauthRoutes);
+    this.app.use('/.well-known', oauthRoutes);
 
-    // Financial routes
-    this.app.use('/api/v1/accounts', accountRoutes);
-    this.app.use('/api/v1/transactions', transactionRoutes);
+    // KYC routes with critical operations limiting
+    this.app.use('/api/v1/kyc', securityHardening.criticalOperationsLimiter, kycRoutes);
+
+    // User Profile routes with standard rate limiting
+    this.app.use('/api/v1/profile', securityHardening.standardRateLimiter, userProfileRoutes);
+
+    // Financial routes with financial operations rate limiting
+    this.app.use('/api/v1/accounts', securityHardening.financialOperationsLimiter, accountRoutes);
+    this.app.use('/api/v1/transactions', securityHardening.financialOperationsLimiter, transactionRoutes);
+
+    // Apply general rate limiting to any remaining API routes
+    this.app.use('/api/', securityHardening.standardRateLimiter);
 
     // 404 handler
     this.app.use('*', (req, res) => {
@@ -392,6 +369,10 @@ class DwayBankServer {
               health: '/health',
               api: '/api',
               auth: '/api/v1/auth',
+              oauth: '/oauth/v1',
+              oidc: '/.well-known/openid_configuration',
+              kyc: '/api/v1/kyc',
+              profile: '/api/v1/profile',
             },
           });
 
@@ -447,35 +428,59 @@ class DwayBankServer {
 // Create and start server
 const server = new DwayBankServer();
 
-// Graceful shutdown handlers
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, initiating graceful shutdown');
-  await server.shutdown();
-  process.exit(0);
-});
+// Prevent memory leaks from event listeners
+process.setMaxListeners(20);
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, initiating graceful shutdown');
-  await server.shutdown();
-  process.exit(0);
-});
+// Global shutdown handler to prevent duplicate listeners
+let shutdownInProgress = false;
+
+const gracefulShutdown = async (signal: string) => {
+  if (shutdownInProgress) {
+    logger.warn(`Shutdown already in progress, ignoring ${signal}`);
+    return;
+  }
+  
+  shutdownInProgress = true;
+  logger.info(`${signal} received, initiating graceful shutdown`);
+  
+  try {
+    await server.shutdown();
+    logger.info('Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during shutdown', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    process.exit(1);
+  }
+};
+
+// Graceful shutdown handlers (only register once)
+process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.once('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Unhandled rejection handler
-process.on('unhandledRejection', (reason, promise) => {
+process.once('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection', { 
     reason: reason instanceof Error ? reason.message : reason,
     promise: promise.toString(),
   });
-  process.exit(1);
+  
+  if (!shutdownInProgress) {
+    gracefulShutdown('unhandledRejection');
+  }
 });
 
 // Uncaught exception handler
-process.on('uncaughtException', (error) => {
+process.once('uncaughtException', (error) => {
   logger.error('Uncaught Exception', { 
     error: error.message,
     stack: error.stack,
   });
-  process.exit(1);
+  
+  if (!shutdownInProgress) {
+    process.exit(1);
+  }
 });
 
 export default server;

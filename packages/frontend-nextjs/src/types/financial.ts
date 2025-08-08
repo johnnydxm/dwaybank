@@ -179,3 +179,129 @@ export interface DeviceInfo {
   last_used: string;
   created_at: string;
 }
+
+// Wallet Integration Types
+export interface WalletConnection {
+  id: string;
+  user_id: string;
+  wallet_type: WalletType;
+  external_wallet_id: string;
+  display_name: string;
+  status: WalletStatus;
+  last_sync: string | null;
+  sync_count: number;
+  error_message: string | null;
+  is_primary: boolean;
+  auto_sync_enabled: boolean;
+  sync_frequency: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type WalletType = 'apple_pay' | 'google_pay' | 'metamask' | 'samsung_pay' | 'paypal' | 'manual';
+export type WalletStatus = 'connected' | 'disconnected' | 'syncing' | 'error' | 'pending' | 'pending_auth';
+
+export interface WalletBalance {
+  id: string;
+  payment_method_id: string;
+  current_balance: number;
+  available_balance: number;
+  pending_balance: number;
+  currency: string;
+  last_updated: string;
+  sync_status: 'success' | 'error' | 'pending';
+  error_message: string | null;
+}
+
+export interface WalletPaymentMethod {
+  id: string;
+  wallet_connection_id: string;
+  external_payment_method_id: string;
+  type: 'card' | 'account' | 'crypto' | 'other';
+  display_name: string;
+  last_four: string | null;
+  currency: string;
+  brand: string | null;
+  is_primary: boolean;
+  is_active: boolean;
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WalletTransaction {
+  id: string;
+  wallet_connection_id: string;
+  payment_method_id: string | null;
+  external_transaction_id: string;
+  amount: number;
+  currency: string;
+  transaction_type: 'credit' | 'debit' | 'transfer' | 'fee';
+  status: 'completed' | 'pending' | 'failed' | 'cancelled';
+  description: string;
+  merchant_name: string | null;
+  category: string | null;
+  transaction_date: string;
+  processed_date: string | null;
+  fee_amount: number | null;
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WalletDashboardData {
+  total_balance_usd: number;
+  connected_wallets: WalletConnection[];
+  payment_methods: (WalletPaymentMethod & { balance?: WalletBalance })[];
+  recent_transactions: WalletTransaction[];
+  sync_status: {
+    last_full_sync: string | null;
+    pending_syncs: number;
+    failed_syncs: number;
+  };
+}
+
+export interface ConnectWalletRequest {
+  wallet_type: WalletType;
+  auth_code?: string;
+  access_token?: string;
+  display_name?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface ConnectWalletResponse {
+  connection_id: string;
+  status: WalletStatus;
+  payment_methods: WalletPaymentMethod[];
+  message: string;
+  auth_url?: string;
+  requires_additional_auth?: boolean;
+}
+
+export interface SyncWalletRequest {
+  connection_id: string;
+  force_refresh?: boolean;
+}
+
+export interface SyncWalletResponse {
+  connection_id: string;
+  status: WalletStatus;
+  payment_methods_synced: number;
+  transactions_synced: number;
+  balances_updated: number;
+  last_sync: Date;
+  errors?: string[];
+}
+
+export interface WalletSyncStatus {
+  id: string;
+  wallet_type: WalletType;
+  display_name: string;
+  status: WalletStatus;
+  last_sync: string | null;
+  sync_count: number;
+  error_message: string | null;
+  last_sync_status: 'success' | 'error' | 'pending' | null;
+  last_sync_duration: number | null;
+  last_sync_completed: string | null;
+}
