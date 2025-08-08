@@ -198,25 +198,26 @@ class DwayBankServer {
       });
     });
 
-    // MFA routes
-    this.app.use('/api/v1/mfa', mfaRoutes);
+    // Apply critical operations rate limiting to authentication routes
+    this.app.use('/api/v1/mfa', securityHardening.criticalOperationsLimiter, mfaRoutes);
+    this.app.use('/api/v1/auth', securityHardening.criticalOperationsLimiter, authRoutes);
 
-    // Authentication routes
-    this.app.use('/api/v1/auth', authRoutes);
-
-    // OAuth 2.0 and OpenID Connect routes
-    this.app.use('/oauth/v1', oauthRoutes);
+    // OAuth 2.0 and OpenID Connect routes with critical rate limiting
+    this.app.use('/oauth/v1', securityHardening.criticalOperationsLimiter, oauthRoutes);
     this.app.use('/.well-known', oauthRoutes);
 
-    // KYC routes
-    this.app.use('/api/v1/kyc', kycRoutes);
+    // KYC routes with critical operations limiting
+    this.app.use('/api/v1/kyc', securityHardening.criticalOperationsLimiter, kycRoutes);
 
-    // User Profile routes
-    this.app.use('/api/v1/profile', userProfileRoutes);
+    // User Profile routes with standard rate limiting
+    this.app.use('/api/v1/profile', securityHardening.standardRateLimiter, userProfileRoutes);
 
-    // Financial routes
-    this.app.use('/api/v1/accounts', accountRoutes);
-    this.app.use('/api/v1/transactions', transactionRoutes);
+    // Financial routes with financial operations rate limiting
+    this.app.use('/api/v1/accounts', securityHardening.financialOperationsLimiter, accountRoutes);
+    this.app.use('/api/v1/transactions', securityHardening.financialOperationsLimiter, transactionRoutes);
+
+    // Apply general rate limiting to any remaining API routes
+    this.app.use('/api/', securityHardening.standardRateLimiter);
 
     // 404 handler
     this.app.use('*', (req, res) => {

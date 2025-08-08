@@ -65,11 +65,11 @@ export const financialOperationsLimiter = rateLimit({
   skipSuccessfulRequests: true,
   keyGenerator: (req) => {
     // For authenticated users, use user ID, otherwise IP
-    return req.user?.id || req.ip;
+    return (req.user as any)?.user_id || req.ip;
   },
   handler: (req, res) => {
     auditLogger.warn('Financial operations rate limit exceeded', {
-      userId: req.user?.id,
+      userId: (req.user as any)?.user_id,
       ip: req.ip,
       path: req.path,
       method: req.method,
@@ -92,11 +92,11 @@ export const adminOperationsLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
   max: 100, // 100 admin operations per 10 minutes
   skipSuccessfulRequests: true,
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: (req) => (req.user as any)?.user_id || req.ip,
   handler: (req, res) => {
     auditLogger.warn('Admin operations rate limit exceeded', {
-      userId: req.user?.id,
-      userRole: req.user?.role,
+      userId: (req.user as any)?.user_id,
+      userRole: (req.user as any)?.role,
       ip: req.ip,
       path: req.path,
       method: req.method,
@@ -114,27 +114,44 @@ export const adminOperationsLimiter = rateLimit({
   },
 });
 
+// Standard rate limiting for general API endpoints
+export const standardRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per 15 minutes
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => (req.user as any)?.user_id || req.ip,
+  handler: (req, res) => {
+    auditLogger.warn('Standard rate limit exceeded', {
+      userId: (req.user as any)?.user_id,
+      ip: req.ip,
+      path: req.path,
+      method: req.method,
+      timestamp: new Date().toISOString(),
+    });
+    
+    res.status(429).json({
+      success: false,
+      error: 'Rate Limit Exceeded',
+      message: 'You have exceeded the request rate limit. Please try again later.',
+      code: 'RATE_LIMIT_STANDARD',
+      retryAfter: 15 * 60,
+      timestamp: new Date().toISOString(),
+    });
+  },
+});
+
 // Slow down middleware for suspicious activity
-export const suspiciousActivitySlowDown = slowDown({
+export const suspiciousActivitySlowDown: any = slowDown({
   windowMs: 15 * 60 * 1000, // 15 minutes
   delayAfter: 3, // Allow 3 requests per window at full speed
   delayMs: 500, // Add 500ms delay per request after delayAfter
   maxDelayMs: 20000, // Maximum delay of 20 seconds
-  keyGenerator: (req) => {
+  keyGenerator: (req: Request) => {
     const fingerprint = crypto
       .createHash('sha256')
       .update(`${req.ip}-${req.get('User-Agent') || ''}`)
       .digest('hex');
     return fingerprint.substring(0, 16);
-  },
-  onLimitReached: (req, res) => {
-    auditLogger.warn('Suspicious activity detected - slow down activated', {
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      path: req.path,
-      method: req.method,
-      timestamp: new Date().toISOString(),
-    });
   },
 });
 
@@ -248,7 +265,7 @@ export const financialSecurityMiddleware = (req: Request, res: Response, next: N
   // Enhanced logging for financial operations
   if (req.path.includes('/transaction') || req.path.includes('/transfer') || req.path.includes('/payment')) {
     auditLogger.info('Financial operation initiated', {
-      userId: req.user?.id,
+      userId: (req.user as any)?.user_id,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
       path: req.path,
@@ -391,7 +408,7 @@ export const corsOptions = {
 export const jsonParserOptions = {
   limit: '10mb',
   strict: true,
-  verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
+  verify: (req: Request, res: Response, buf: Buffer, encoding: BufferEncoding) => {
     // Check for malformed JSON attacks
     try {
       JSON.parse(buf.toString(encoding));
@@ -415,7 +432,7 @@ export const urlEncodedOptions = {
   extended: true,
   limit: '10mb',
   parameterLimit: 100,
-  verify: (req: Request, res: Response, buf: Buffer, encoding: string) => {
+  verify: (req: Request, res: Response, buf: Buffer, encoding: BufferEncoding) => {
     // Check for oversized payloads
     if (buf.length > 10 * 1024 * 1024) { // 10MB
       auditLogger.warn('Oversized payload detected', {
@@ -467,7 +484,7 @@ export const requestTimeoutMiddleware = (timeout: number = 30000) => {
  */
 export const ipWhitelistMiddleware = (allowedIPs: string[] = []) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const clientIP = req.ip;
+    const clientIP = req.ip || 'unknown';
     
     if (allowedIPs.length > 0 && !allowedIPs.includes(clientIP)) {
       auditLogger.warn('IP not whitelisted', {
@@ -495,6 +512,7 @@ export default {
   criticalOperationsLimiter,
   financialOperationsLimiter,
   adminOperationsLimiter,
+  standardRateLimiter,
   suspiciousActivitySlowDown,
   advancedHelmet,
   requestIdMiddleware,
